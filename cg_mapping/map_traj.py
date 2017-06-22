@@ -67,14 +67,23 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
     """
     CG_topology = mdtraj.Topology()
     for residue in topol.residues:
-        # Iterate through each AA residue while starting index at 0
+        # Create a temporary coarse grained bead to add atom indices
         temp_CG_bead = []
+        # Obtain the correct molecule mapping based on the residue
         molecule_mapping = all_CG_mappings[residue.name]
+        # iterate through the residue's atoms
         for index, atom in enumerate(residue.atoms):
-            temp_CG_bead.append(index)
+            # Add the index to the temporary CG bead
+            temp_CG_bead.append(str(index))
+            # Check if the temp CG bead exists in the molecule mapping
             for key in molecule_mapping.keys():
-                if molecule_mapping[key] is temp_CG_bead:
-                    print("hit")
+                # If the molecule mapping has this sequence, 
+                # Add the CG bead information to the CG topology
+                # And reset the temporary CG bead
+                if set(molecule_mapping[key]) == set(temp_CG_bead):
+                    temp_CG_bead = []
+                else:
+                    print(temp_CG_bead)
 
 
 
@@ -89,7 +98,7 @@ traj = mdtraj.load(pdbfile)
 topol = traj.topology
 
 # Read in the mapping file
-mapfile = 'mappings/DSPC.map'
+mapfile = 'mappings/DSPC_index.map'
 # Huge dictionary of dictionaries, keys are molecule names
 # Values are the molecule's mapping dictionary
 all_CG_mappings = OrderedDict()
