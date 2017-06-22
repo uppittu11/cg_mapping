@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import mdtraj
 from collections import OrderedDict
@@ -44,6 +43,26 @@ def _compute_com(traj):
     com = numerator/totalmass 
     return com
 
+def _create_CG_topology(topol=None, mapping=None):
+    """ Create CG topology from given topology and mapping
+
+    Parameters
+    ---------
+    topol : mdtraj Topology
+    mapping : dict
+
+    Returns
+    -------
+    CG_topology : mdtraj Topology
+    """
+    CG_topology = mdtraj.Topology()
+    for atom in topol.atoms:
+        # Read each atom and see if it matches a mapping
+        print(atom.name)
+
+
+
+    return CG_topology
 
 
 
@@ -51,13 +70,18 @@ trajfile = "md_pureDSPC.xtc"
 pdbfile = "md_pureDSPC.pdb"
 #traj = mdtraj.load(trajfile,top=pdbfile)
 traj = mdtraj.load(pdbfile)
+topol = traj.topology
 
 # Read in the mapping file
 mapfile = 'mappings/DSPC.map'
-mapping_dict = _load_mapping(mapfile=mapfile)
+mapping = _load_mapping(mapfile=mapfile)
 
 # Go through the trajectory frame by frame
-_compute_com(traj)
+
+CG_topol = _create_CG_topology(topol=topol, mapping=mapping)
+
+# Generate a CG topology from the atomistic using the mapping
+# Generate a CG trajecctory from the atomistci using the CG topology
 
 # Iterate through the atoms, 
 # if a tuple matches the dictionary,
