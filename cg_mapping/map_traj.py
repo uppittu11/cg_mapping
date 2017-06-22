@@ -64,6 +64,9 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
     Returns
     -------
     CG_topology : mdtraj Topology
+    CG_topology_map : Dict()
+        keys: resname + resindex + "-" + CG index
+        val: corresponding atom indices
     """
     CG_topology = mdtraj.Topology()
     for residue in topol.residues:
@@ -83,7 +86,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
                 if set(molecule_mapping[key]) == set(temp_CG_bead):
                     temp_CG_bead = []
                 else:
-                    print(temp_CG_bead)
+                    pass
 
 
 
@@ -97,15 +100,18 @@ pdbfile = "md_pureDSPC.pdb"
 traj = mdtraj.load(pdbfile)
 topol = traj.topology
 
-# Read in the mapping file
-mapfile = 'mappings/DSPC_index.map'
+# Read in the mapping files, could be made more pythonic
+DSPCmapfile = 'mappings/DSPC_index.map'
+watermapfile = 'mappings/water_index.map'
+
 # Huge dictionary of dictionaries, keys are molecule names
 # Values are the molecule's mapping dictionary
+# could be made more pythonic
 all_CG_mappings = OrderedDict()
-molecule_mapping = _load_mapping(mapfile=mapfile)
+molecule_mapping = _load_mapping(mapfile=DSPCmapfile)
 all_CG_mappings.update({''.join(molecule_mapping['Name']): molecule_mapping})
-
-# Go through the trajectory frame by frame
+molecule_mapping = _load_mapping(mapfile=watermapfile)
+all_CG_mappings.update({''.join(molecule_mapping['Name']): molecule_mapping})
 
 CG_topol = _create_CG_topology(topol=topol, all_CG_mappings=all_CG_mappings)
 
