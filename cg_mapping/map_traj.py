@@ -26,16 +26,38 @@ def _load_mapping(mapfile=None):
 
 
 
+def _compute_com(traj):
+    """ Compute center of mass
 
-#trajfile = "md_pureDSPC.xtc"
-trajfile = "md_pureDSPC.pdb"
-traj = mdtraj.load(trajfile)
+    Parameters
+    -----------
+    traj : mdtraj trajectory
+        Trajectory of atoms for which center of mass will be computed
+    
+    Returns
+    -------
+    com : tuple (n_frame, 3)
+        Coordinates of center of mass
+    """
+    numerator = np.sum(traj.xyz[:,:,:], axis=1)
+    totalmass = sum(atom.element.mass for atom in traj.top.atoms)
+    com = numerator/totalmass 
+    return com
+
+
+
+
+trajfile = "md_pureDSPC.xtc"
+pdbfile = "md_pureDSPC.pdb"
+#traj = mdtraj.load(trajfile,top=pdbfile)
+traj = mdtraj.load(pdbfile)
 
 # Read in the mapping file
 mapfile = 'mappings/DSPC.map'
 mapping_dict = _load_mapping(mapfile=mapfile)
 
 # Go through the trajectory frame by frame
+_compute_com(traj)
 
 # Iterate through the atoms, 
 # if a tuple matches the dictionary,
