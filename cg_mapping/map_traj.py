@@ -33,28 +33,7 @@ def _load_mapping(mapfile=None,reverse=False):
                 [line.split(":")[1].rstrip(),line.split(":")[2].rstrip().split()] 
                 for line in f if line.rstrip()}
 
-    #return mapping_dict, CG_index_to_type_dict
     return mapping_dict
-
-
-
-def _compute_com(traj):
-    """ Compute center of mass
-
-    Parameters
-    -----------
-    traj : mdtraj trajectory
-        Trajectory of atoms for which center of mass will be computed
-    
-    Returns
-    -------
-    com : tuple (n_frame, 3)
-        Coordinates of center of mass
-    """
-    numerator = np.sum(traj.xyz[:,:,:], axis=1)
-    totalmass = sum(atom.element.mass for atom in traj.top.atoms)
-    com = numerator/totalmass 
-    return com
 
 def _create_CG_topology(topol=None, all_CG_mappings=None):
     """ Create CG topology from given topology and mapping
@@ -82,6 +61,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
         temp_CG_atoms = []
         # Obtain the correct molecule mapping based on the residue
         molecule_mapping = all_CG_mappings[residue.name]
+        temp_residue = CG_topology.add_residue(residue.name, CG_topology.add_chain())
         # iterate through the residue's atoms
         for index, atom in enumerate(residue.atoms):
             # Add the index to the temporary CG bead
@@ -100,9 +80,14 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
                     temp_CG_indices = []
                     temp_CG_atoms = []
                     CG_topology_map.append(new_bead)
+                    # issue here is that each bead that gets added
+                    # also becomes a new residue
+                    #CG_topology.add_atom(new_bead.beadtype,
+                    #        new_bead.beadtype, CG_topology.add_residue(
+                    #            new_bead.resname, CG_topology.add_chain()))
                     CG_topology.add_atom(new_bead.beadtype,
-                            new_bead.beadtype, CG_topology.add_residue(
-                                new_bead.resname, CG_topology.add_chain()))
+                            new_bead.beadtype, temp_residue)
+
                 else:
                     pass
 
