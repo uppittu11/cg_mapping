@@ -131,8 +131,8 @@ def _convert_xyz(traj=None, CG_topology_map=None):
     for bead in CG_topology_map:
         atom_indices = bead.atom_indices 
         # Two ways to compute center of mass, both are pretty fast
-        bead_coordinates = _compute_com(traj.atom_slice(atom_indices))
-        #bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
+        #bead_coordinates = _compute_com(traj.atom_slice(atom_indices))
+        bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
         CG_xyz[:, bead.beadindex, :] = bead_coordinates
 
 
@@ -148,8 +148,8 @@ traj = mdtraj.load(pdbfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
-DSPCmapfile = 'mappings/DSPC_index.map'
-watermapfile = 'mappings/water_index.map'
+DSPCmapfile = 'mappings/DSPC.map'
+watermapfile = 'mappings/water.map'
 
 # Huge dictionary of dictionaries, keys are molecule names
 # Values are the molecule's mapping dictionary
