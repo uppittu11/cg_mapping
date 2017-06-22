@@ -56,21 +56,17 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
     CG_topology = mdtraj.Topology()
     CG_beadindex = 0
     for residue in topol.residues:
-        # Create a temporary coarse grained bead to add atom indices
-        temp_CG_indices = []
-        temp_CG_atoms = []
-        # Obtain the correct molecule mapping based on the residue
+            # Obtain the correct molecule mapping based on the residue
         molecule_mapping = all_CG_mappings[residue.name]
         temp_residue = CG_topology.add_residue(residue.name, CG_topology.add_chain())
-        # iterate through the residue's atoms
+        temp_CG_indices = []
+        temp_CG_atoms = []
+        temp_CG_beads = [None]*len(molecule_mapping.keys())
+
         for index, atom in enumerate(residue.atoms):
-            # Add the index to the temporary CG bead
             temp_CG_indices.append(str(index))
             temp_CG_atoms.append(atom)
-            # Check if the temp CG bead exists in the molecule mapping
             for key in molecule_mapping.keys():
-                # If the molecule mapping has this sequence, 
-                # And reset the temporary CG bead
                 if set(molecule_mapping[key][1]) == set(temp_CG_indices):
                     new_bead = CG_bead(beadindex=CG_beadindex, 
                                        beadtype=molecule_mapping[key][0],
@@ -79,17 +75,14 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
                     CG_beadindex +=1 
                     temp_CG_indices = []
                     temp_CG_atoms = []
-                    CG_topology_map.append(new_bead)
-                    # issue here is that each bead that gets added
-                    # also becomes a new residue
-                    #CG_topology.add_atom(new_bead.beadtype,
-                    #        new_bead.beadtype, CG_topology.add_residue(
-                    #            new_bead.resname, CG_topology.add_chain()))
-                    CG_topology.add_atom(new_bead.beadtype,
-                            new_bead.beadtype, temp_residue)
+                    temp_CG_beads[int(key)] = new_bead
 
                 else:
                     pass
+
+        for bead in temp_CG_beads:
+            CG_topology_map.append(bead)
+            CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
 
     return CG_topology_map, CG_topology
 
@@ -114,6 +107,7 @@ def _convert_xyz(traj=None, CG_topology_map=None):
     # Then slice the trajectory and compute hte center of mass for that particular bead
     CG_xyz = np.ndarray(shape=(traj.n_frames, len(CG_topology_map),3))
     for bead in CG_topology_map:
+        print(bead.beadtype, bead.atom_indices)
         atom_indices = bead.atom_indices 
         # Two ways to compute center of mass, both are pretty fast
         #bead_coordinates = _compute_com(traj.atom_slice(atom_indices))
@@ -127,13 +121,14 @@ def _convert_xyz(traj=None, CG_topology_map=None):
 
 
 trajfile = "md_pureDSPC.xtc"
-pdbfile = "md_pureDSPC.pdb"
+#pdbfile = "md_pureDSPC.pdb"
+pdbfile = "single_DSPC.pdb"
 #traj = mdtraj.load(trajfile,top=pdbfile)
 traj = mdtraj.load(pdbfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
-DSPCmapfile = 'mappings/DSPC.map'
+DSPCmapfile = 'mappings/new_DSPC.map'
 watermapfile = 'mappings/water.map'
 
 # Huge dictionary of dictionaries, keys are molecule names
