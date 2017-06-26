@@ -68,7 +68,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
             temp_CG_atoms.append(atom)
             for key in molecule_mapping.keys():
                 if set(molecule_mapping[key][1]) == set(temp_CG_indices):
-                    new_bead = CG_bead(beadindex=CG_beadindex, 
+                    new_bead = CG_bead(beadindex=0, 
                                        beadtype=molecule_mapping[key][0],
                                        resname=residue.name,
                                        atom_indices=[atom.index for atom in temp_CG_atoms])
@@ -80,7 +80,8 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
                 else:
                     pass
 
-        for bead in temp_CG_beads:
+        for index, bead in enumerate(temp_CG_beads):
+            bead.beadindex = index
             CG_topology_map.append(bead)
             CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
 
@@ -106,13 +107,13 @@ def _convert_xyz(traj=None, CG_topology_map=None):
     # For each bead, get the atom indices
     # Then slice the trajectory and compute hte center of mass for that particular bead
     CG_xyz = np.ndarray(shape=(traj.n_frames, len(CG_topology_map),3))
-    for bead in CG_topology_map:
-        print(bead.beadtype, bead.atom_indices)
+    for index, bead in enumerate(CG_topology_map):
         atom_indices = bead.atom_indices 
         # Two ways to compute center of mass, both are pretty fast
         #bead_coordinates = _compute_com(traj.atom_slice(atom_indices))
         bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
-        CG_xyz[:, bead.beadindex, :] = bead_coordinates
+        #CG_xyz[:, bead.beadindex, :] = bead_coordinates
+        CG_xyz[:, index, :] = bead_coordinates
 
 
     return CG_xyz
@@ -121,14 +122,14 @@ def _convert_xyz(traj=None, CG_topology_map=None):
 
 
 trajfile = "md_pureDSPC.xtc"
-#pdbfile = "md_pureDSPC.pdb"
-pdbfile = "single_DSPC.pdb"
+pdbfile = "md_pureDSPC.pdb"
+#pdbfile = "single_DSPC.pdb"
 #traj = mdtraj.load(trajfile,top=pdbfile)
 traj = mdtraj.load(pdbfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
-DSPCmapfile = 'mappings/new_DSPC.map'
+DSPCmapfile = 'mappings/DSPC.map'
 watermapfile = 'mappings/water.map'
 
 # Huge dictionary of dictionaries, keys are molecule names
