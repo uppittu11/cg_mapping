@@ -1,8 +1,11 @@
 import numpy as np
 import mdtraj
 import time
-from CG_bead import CG_bead
+import cg_mapping
+#import cg_mapping.CG_bead
+#from cg_mapping.CG_bead import CG_bead
 from collections import OrderedDict
+import os
 
 
 def _load_mapping(mapfile=None,reverse=False):
@@ -121,17 +124,18 @@ def _convert_xyz(traj=None, CG_topology_map=None):
 
 
 
-trajfile = "md_pureDSPC.xtc"
-pdbfile = "md_pureDSPC.pdb"
-#pdbfile = "single_DSPC.pdb"
-#traj = mdtraj.load(trajfile,top=pdbfile)
-traj = mdtraj.load(pdbfile)
+trajfile = "last20.xtc"
+
+pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
+PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
+traj = mdtraj.load(trajfile, top=pdbfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
-DSPCmapfile = 'mappings/DSPC.map'
-watermapfile = 'mappings/water.map'
-
+DSPCmapfile = os.path.join(PATH_TO_MAPPINGS,'DSPC.map')#'mappings/DSPC.map'
+watermapfile = os.path.join(PATH_TO_MAPPINGS,'water.map')
+alc16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16OH.map')
+acd16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16FFA.map')
 # Huge dictionary of dictionaries, keys are molecule names
 # Values are the molecule's mapping dictionary
 # could be made more pythonic
@@ -143,13 +147,23 @@ all_CG_mappings.update({'DSPC': molecule_mapping})
 molecule_mapping = _load_mapping(mapfile=watermapfile)
 all_CG_mappings.update({'HOH': molecule_mapping})
 
+molecule_mapping = _load_mapping(mapfile=alc16mapfile)
+all_CG_mappings.update({'alc16': molecule_mapping})
+
+molecule_mapping = _load_mapping(mapfile=acd16mapfile)
+all_CG_mappings.update({'acd16': molecule_mapping})
+
 CG_topology_map, CG_topology = _create_CG_topology(topol=topol, all_CG_mappings=all_CG_mappings)
 CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
 CG_traj.save('cg-traj.xtc')
-CG_traj[0].save('frame0.gro')
+CG_traj[0].save('cg-frame0.gro')
+CG_traj[0].save('cg-frame0.h5')
+CG_traj[0].save('cg-frame0.netcdf')
+CG_traj[0].save('cg-frame0.xyz')
+
 end=time.time()
 print(end-start)
 
