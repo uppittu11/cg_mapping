@@ -2,8 +2,7 @@ import numpy as np
 import mdtraj
 import time
 import cg_mapping
-#import cg_mapping.CG_bead
-#from cg_mapping.CG_bead import CG_bead
+from cg_mapping.CG_bead import CG_bead
 from collections import OrderedDict
 import os
 
