@@ -1,11 +1,13 @@
-import numpy as np
-import mdtraj
 import time
-import cg_mapping
-from cg_mapping.CG_bead import CG_bead
 from collections import OrderedDict
 import os
+from optparse import OptionParser
+import numpy as np
+import mdtraj
+import cg_mapping
+from cg_mapping.CG_bead import CG_bead
 
+PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
 
 def _load_mapping(mapfile=None,reverse=False):
     """ Load a forward mapping
@@ -121,13 +123,17 @@ def _convert_xyz(traj=None, CG_topology_map=None):
     return CG_xyz
 
 
+parser = OptionParser()
+parser.add_option("-f", action="store", type="string", dest = "trajfile")
+parser.add_option("-c", action="store", type="string", dest = "topfile")
+parser.add_option("-o", action="store", type="string", dest = "output", default='traj')
+(options, args) = parser.parse_args()
 
 
-trajfile = "last20.xtc"
+#trajfile = "last20.xtc"
 
-pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
-PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
-traj = mdtraj.load(trajfile, top=pdbfile)
+#pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
+traj = mdtraj.load(options.trajfile, top=options.topfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
@@ -157,11 +163,11 @@ CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
-CG_traj.save('cg-traj.xtc')
-CG_traj[0].save('cg-frame0.gro')
-CG_traj[0].save('cg-frame0.h5')
-CG_traj[0].save('cg-frame0.netcdf')
-CG_traj[0].save('cg-frame0.xyz')
+CG_traj.save('cg-{}.xtc'.format(options.output))
+CG_traj[0].save('cg-{}.gro'.format(options.output))
+CG_traj[0].save('cg-{}.h5'.format(options.output))
+#CG_traj[0].save('cg-frame0.netcdf')
+CG_traj[0].save('cg-{}.xyz'.format(options.output))
 
 end=time.time()
 print(end-start)
