@@ -16,7 +16,7 @@ parser.add_option("-o", action="store", type="string", dest = "output", default=
 #topfile = 'cg-111_DSPC_C16OH_C16FFA_bulkfluid_7-25.gro'
 
 traj = mdtraj.load(options.trajfile, top=options.topfile)
-beadtypes=['P3', 'Nda', 'Na', 'C1', 'Q0', 'Qa']
+beadtypes=['P3', 'Nda', 'Na', 'C1', 'Qa', 'Q0']
 # Get a combination of bead types
 for i,j in itertools.combinations_with_replacement(beadtypes, 2):
     # Find the corresponding indices
