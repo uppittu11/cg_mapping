@@ -26,13 +26,7 @@ for i,j in itertools.combinations_with_replacement(beadtypes, 2):
     # Each element being an atom index
     start = time.time()
     pairs = [(i,j) for i,j in itertools.product(i_indices, j_indices)]
-    if 'dcd' in options.trajfile:
-        # Account for unit interpretations in mdtraj
-        # DCD files are assumed to be in angstroms
-        (first, second) = mdtraj.compute_rdf(traj[-200:], pairs, [0.001, 0.2])
-        first= 10*first
-    else:
-        (first, second) = mdtraj.compute_rdf(traj[-200:], pairs, [0.01, 2])
+    (first, second) = mdtraj.compute_rdf(traj, pairs, [0.005, 2], bin_width=0.01 )
     np.savetxt('{}-{}-{}.txt'.format(i, j, options.output), np.column_stack([first,second]))
     end = time.time()
     print(end-start)
