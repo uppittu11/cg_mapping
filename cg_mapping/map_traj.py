@@ -4,10 +4,12 @@ import os
 from optparse import OptionParser
 import numpy as np
 import mdtraj
+import mbuild as mb
 import cg_mapping
 from cg_mapping.CG_bead import CG_bead
 
 PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
+HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
     """ Load a forward mapping
@@ -166,8 +168,15 @@ CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time,
 CG_traj.save('cg-{}.xtc'.format(options.output))
 CG_traj[0].save('cg-{}.gro'.format(options.output))
 CG_traj[0].save('cg-{}.h5'.format(options.output))
-#CG_traj[0].save('cg-frame0.netcdf')
 CG_traj[0].save('cg-{}.xyz'.format(options.output))
+
+
+mb_compound = mb.Compound()
+mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
+for particle in mb_compound.particles():
+    particle.name = "_"+ particle.name.strip()
+mb_compound.save('cg-{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
+
 
 end=time.time()
 print(end-start)
