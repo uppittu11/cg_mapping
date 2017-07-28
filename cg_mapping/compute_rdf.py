@@ -20,13 +20,15 @@ beadtypes=['P3', 'Nda', 'Na', 'C1', 'Qa', 'Q0']
 # Get a combination of bead types
 for i,j in itertools.combinations_with_replacement(beadtypes, 2):
     # Find the corresponding indices
-    i_indices = traj.topology.select('name {}'.format(i))
-    j_indices = traj.topology.select('name {}'.format(j))
+    #i_indices = traj.topology.select('name {}'.format(i))
+    #j_indices = traj.topology.select('name {}'.format(j))
     # Create a matrix so each row has two elements
     # Each element being an atom index
-    start = time.time()
-    pairs = [(i,j) for i,j in itertools.product(i_indices, j_indices)]
+    #start = time.time()
+    #pairs = [(i,j) for i,j in itertools.product(i_indices, j_indices)]
+    pairs = traj.topology.select_pairs(selection1='name {}'.format(i),
+            selection2='name {}'.formst(j))
     (first, second) = mdtraj.compute_rdf(traj, pairs, [0.005, 2], bin_width=0.01 )
     np.savetxt('{}-{}-{}.txt'.format(i, j, options.output), np.column_stack([first,second]))
-    end = time.time()
-    print(end-start)
+    #end = time.time()
+    #print(end-start)
