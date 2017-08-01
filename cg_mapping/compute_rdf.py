@@ -27,7 +27,7 @@ for i,j in itertools.combinations_with_replacement(beadtypes, 2):
     #start = time.time()
     #pairs = [(i,j) for i,j in itertools.product(i_indices, j_indices)]
     pairs = traj.topology.select_pairs(selection1='name {}'.format(i),
-            selection2='name {}'.formst(j))
+            selection2='name {}'.format(j))
     (first, second) = mdtraj.compute_rdf(traj, pairs, [0.005, 2], bin_width=0.01 )
     np.savetxt('{}-{}-{}.txt'.format(i, j, options.output), np.column_stack([first,second]))
     #end = time.time()
