@@ -3,6 +3,7 @@ from collections import OrderedDict
 import os
 from optparse import OptionParser
 import numpy as np
+from sklearn import cluster
 import mdtraj
 import mbuild as mb
 import cg_mapping
@@ -41,7 +42,7 @@ def _load_mapping(mapfile=None,reverse=False):
 
     return mapping_dict
 
-def _create_CG_topology(topol=None, all_CG_mappings=None):
+def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
     """ Create CG topology from given topology and mapping
 
     Parameters
@@ -50,6 +51,8 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
     all_CG_mappings : dict
         maps residue names to respective CG 
         mapping dictionaries(CG index, [beadtype, atom indices])
+    water_bead_mapping : int
+        specifies how many water molecules get mapped to a water CG bead
 
     Returns
     -------
@@ -61,39 +64,54 @@ def _create_CG_topology(topol=None, all_CG_mappings=None):
     CG_topology_map = []
     CG_topology = mdtraj.Topology()
     CG_beadindex = 0
+    water_counter = 0
+    # Loop over all residues
     for residue in topol.residues:
+        if not residue.is_water():
             # Obtain the correct molecule mapping based on the residue
-        molecule_mapping = all_CG_mappings[residue.name]
-        temp_residue = CG_topology.add_residue(residue.name, CG_topology.add_chain())
-        temp_CG_indices = []
-        temp_CG_atoms = []
-        temp_CG_beads = [None]*len(molecule_mapping.keys())
+            molecule_mapping = all_CG_mappings[residue.name]
+            temp_residue = CG_topology.add_residue(residue.name, CG_topology.add_chain())
+            temp_CG_indices = []
+            temp_CG_atoms = []
+            temp_CG_beads = [None]*len(molecule_mapping.keys())
 
-        for index, atom in enumerate(residue.atoms):
-            temp_CG_indices.append(str(index))
-            temp_CG_atoms.append(atom)
-            for key in molecule_mapping.keys():
-                if set(molecule_mapping[key][1]) == set(temp_CG_indices):
-                    new_bead = CG_bead(beadindex=0, 
-                                       beadtype=molecule_mapping[key][0],
-                                       resname=residue.name,
-                                       atom_indices=[atom.index for atom in temp_CG_atoms])
-                    CG_beadindex +=1 
-                    temp_CG_indices = []
-                    temp_CG_atoms = []
-                    temp_CG_beads[int(key)] = new_bead
+            for index, atom in enumerate(residue.atoms):
+                temp_CG_indices.append(str(index))
+                temp_CG_atoms.append(atom)
+                for key in molecule_mapping.keys():
+                    if set(molecule_mapping[key][1]) == set(temp_CG_indices):
+                        new_bead = CG_bead(beadindex=0, 
+                                           beadtype=molecule_mapping[key][0],
+                                           resname=residue.name,
+                                           atom_indices=[atom.index for atom in temp_CG_atoms])
+                        CG_beadindex +=1 
+                        temp_CG_indices = []
+                        temp_CG_atoms = []
+                        temp_CG_beads[int(key)] = new_bead
 
-                else:
-                    pass
+                    else:
+                        pass
 
-        for index, bead in enumerate(temp_CG_beads):
-            bead.beadindex = index
-            CG_topology_map.append(bead)
-            CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
+            for index, bead in enumerate(temp_CG_beads):
+                bead.beadindex = index
+                CG_topology_map.append(bead)
+                CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
+        else:
+            water_counter +=1
+            if water_map_counter % water_bead_mapping == 0:
+                temp_residue = CG_topology.add_residue("HOH", CG_topology.add_chain())
+                new_bead = CG_bead(beadindex=0, beadtype="P4",
+                        resname='HOH')
+                CG_topology_map.append(new_bead)
+                CG_topology.add_atom("P4", "P4", temp_residue)
+
+
+
+
 
     return CG_topology_map, CG_topology
 
-def _convert_xyz(traj=None, CG_topology_map=None):
+def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     """Take atomistic trajectory and convert to CG trajectory
 
     Parameters
@@ -114,12 +132,45 @@ def _convert_xyz(traj=None, CG_topology_map=None):
     # Then slice the trajectory and compute hte center of mass for that particular bead
     CG_xyz = np.ndarray(shape=(traj.n_frames, len(CG_topology_map),3))
     for index, bead in enumerate(CG_topology_map):
-        atom_indices = bead.atom_indices 
-        # Two ways to compute center of mass, both are pretty fast
-        #bead_coordinates = _compute_com(traj.atom_slice(atom_indices))
-        bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
-        #CG_xyz[:, bead.beadindex, :] = bead_coordinates
-        CG_xyz[:, index, :] = bead_coordinates
+        if 'HOH' not in bead.resname:
+            # Handle non-water residuse with center of mass calculation over all frames
+            atom_indices = bead.atom_indices 
+            # Two ways to compute center of mass, both are pretty fast
+            bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
+            CG_xyz[:, index, :] = bead_coordinates
+        else:
+            # Handle waters by initially setting the bead coordinates to zero
+            CG_xyz[:,index,:] = np.zeros((traj.n_frames,3))
+
+    # Perform kmeans, frame-by-frame, over all water residues
+    for frame in traj:
+        # Get atom indices of all water molecules
+        waters = top.select('water')
+
+        # This is actually corresponds to each water atom (H, O, H)
+        n_aa_water = len(waters)
+        aa_water_xyz = traj.atom_slice(waters).xyz
+
+        # Number of CG waters, divided by number of atoms in water 
+        n_cg_water = int(n_aa_water / (3* water_bead_mapping))
+        # Water clusters are a list (n_cg_water) of empty lists
+        water_clusters = [[] for i in range(n_cg_water)]
+
+        # Perform the k-means clustering based on the AA water xyz
+        k_means = cluster.KMeans(n_clusters=n_cg_water)
+        k_means.fit(aa_water_xyz)
+
+        # Each cluster index says which cluster an atom belongs to
+        for atom_index, cluster_index in enumerate(k_means.labels_):
+            # Sort each water atom into the corresponding cluster
+            # The item being added should be an atom index
+            water_clusters[cluster_index].append(waters[atom_index])
+
+        # For each cluster, compute enter of mass
+        for cg_index, cluster in enumerate(water_clusters):
+            com = mdtraj.compute_center_of_mass(traj.atom_slice(cluster))
+            CG_xyz[frame, cg_index,:] = com
+
 
 
     return CG_xyz
