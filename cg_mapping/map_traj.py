@@ -8,8 +8,9 @@ import mdtraj
 import mbuild as mb
 import cg_mapping
 from cg_mapping.CG_bead import CG_bead
+#import CG_bead
 
-PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
+PATH_TO_MAPPINGS='/home/ayang41/Programs/cg_mapping/cg_mapping/mappings/'
 HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
@@ -67,7 +68,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
     water_counter = 0
     # Loop over all residues
     for residue in topol.residues:
-        if not residue.is_water():
+        if not residue.is_water:
             # Obtain the correct molecule mapping based on the residue
             molecule_mapping = all_CG_mappings[residue.name]
             temp_residue = CG_topology.add_residue(residue.name, CG_topology.add_chain())
@@ -98,7 +99,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
                 CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
         else:
             water_counter +=1
-            if water_map_counter % water_bead_mapping == 0:
+            if water_counter % water_bead_mapping == 0:
                 temp_residue = CG_topology.add_residue("HOH", CG_topology.add_chain())
                 new_bead = CG_bead(beadindex=0, beadtype="P4",
                         resname='HOH')
@@ -130,6 +131,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     # Iterate through the CG_topology
     # For each bead, get the atom indices
     # Then slice the trajectory and compute hte center of mass for that particular bead
+    entire_start = time.time()
     CG_xyz = np.ndarray(shape=(traj.n_frames, len(CG_topology_map),3))
     for index, bead in enumerate(CG_topology_map):
         if 'HOH' not in bead.resname:
@@ -143,13 +145,15 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
             CG_xyz[:,index,:] = np.zeros((traj.n_frames,3))
 
     # Perform kmeans, frame-by-frame, over all water residues
-    for frame in traj:
+
+    from sklearn import cluster
+    for frame_index, frame in enumerate(traj):
         # Get atom indices of all water molecules
-        waters = top.select('water')
+        waters = traj.topology.select('water')
 
         # This is actually corresponds to each water atom (H, O, H)
         n_aa_water = len(waters)
-        aa_water_xyz = traj.atom_slice(waters).xyz
+        aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
 
         # Number of CG waters, divided by number of atoms in water 
         n_cg_water = int(n_aa_water / (3* water_bead_mapping))
@@ -157,8 +161,11 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
         water_clusters = [[] for i in range(n_cg_water)]
 
         # Perform the k-means clustering based on the AA water xyz
+        start = time.time()
         k_means = cluster.KMeans(n_clusters=n_cg_water)
         k_means.fit(aa_water_xyz)
+        end = time.time()
+        print("Clustering one frame took: {}".format(end-start))
 
         # Each cluster index says which cluster an atom belongs to
         for atom_index, cluster_index in enumerate(k_means.labels_):
@@ -167,18 +174,19 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
             water_clusters[cluster_index].append(waters[atom_index])
 
         # For each cluster, compute enter of mass
-        for cg_index, cluster in enumerate(water_clusters):
-            com = mdtraj.compute_center_of_mass(traj.atom_slice(cluster))
-            CG_xyz[frame, cg_index,:] = com
-
+        for cg_index, water_cluster in enumerate(water_clusters):
+            com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
+            CG_xyz[frame_index, cg_index,:] = com
+    entire_end = time.time()
+    print("XYZ conversion took: {}".format(entire_end - entire_start))
 
 
     return CG_xyz
 
 
 parser = OptionParser()
-parser.add_option("-f", action="store", type="string", dest = "trajfile")
-parser.add_option("-c", action="store", type="string", dest = "topfile")
+parser.add_option("-f", action="store", type="string", dest = "trajfile", default='last20.xtc')
+parser.add_option("-c", action="store", type="string", dest = "topfile", default='md_pureDSPC.gro')
 parser.add_option("-o", action="store", type="string", dest = "output", default='traj')
 (options, args) = parser.parse_args()
 
