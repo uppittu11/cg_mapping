@@ -1,17 +1,19 @@
 import time
 import warnings
+import itertools
+from multiprocessing import Pool
 from collections import OrderedDict
 import os
 from optparse import OptionParser
 import numpy as np
-from sklearn import cluster
+#from sklearn import cluster
 import mdtraj
 import mbuild as mb
 import cg_mapping
 from cg_mapping.CG_bead import CG_bead
 #import CG_bead
 
-PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
+PATH_TO_MAPPINGS='/home/ayang41/Programs/cg_mapping/cg_mapping/mappings/'
 HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
@@ -113,6 +115,57 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
 
     return CG_topology_map, CG_topology
 
+def _map_waters(traj=None, CG_xyz=None, water_start=0, frame_index=0):
+    """ Worker function to parallelize mapping waters via kmeans
+
+    Parameters
+    ----------
+    traj : mdtraj trajectory
+        full atomstic trajectory
+    frame index : int
+        parallelizing calculation frame by frame
+    water_start : int
+        counter denoting which index in the CG coordiantes is water
+
+    Returns
+    ------ nothign?
+    CG_xyz : np.ndarray(n_frame, n_CG_beads, 3)
+
+    """
+    start = time.time()
+    frame = traj[frame_index]
+    # Get atom indices of all water oxygens
+    waters = frame.topology.select('water and name O')
+
+    # Get coordinates and number of all water oxygens
+    n_aa_water = len(waters)
+    aa_water_xyz = frame.atom_slice(waters).xyz[:,:]
+
+    # Number of CG water molecules based on mapping scheme
+    n_cg_water = int(n_aa_water /  water_bead_mapping)
+    # Water clusters are a list (n_cg_water) of empty lists
+    water_clusters = [[] for i in range(n_cg_water)]
+
+    # Perform the k-means clustering based on the AA water xyz
+    k_means = cluster.KMeans(n_clusters=n_cg_water)
+    k_means.fit(aa_water_xyz)
+
+    # Each cluster index says which cluster an atom belongs to
+    for atom_index, cluster_index in enumerate(k_means.labels_):
+        # Sort each water atom into the corresponding cluster
+        # The item being added should be an atom index
+        water_clusters[cluster_index].append(waters[atom_index])
+
+
+    # For each cluster, compute enter of mass
+    for cg_index, water_cluster in enumerate(water_clusters):
+        com = mdtraj.compute_center_of_mass(frame.atom_slice(water_cluster))
+        CG_xyz[frame_index, cg_index + water_start,:] = com
+    end = time.time()
+    print("K-means for frame {}: {}".format(frame_index, end-start))
+
+    #return CG_xyz
+
 def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     """Take atomistic trajectory and convert to CG trajectory
 
@@ -157,50 +210,58 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     water_start = min(water_indices)
 
     # Perform kmeans, frame-by-frame, over all water residues
-    from sklearn import cluster
-    for frame_index, frame in enumerate(traj):
-        # Get atom indices of all water oxygens
-        waters = traj.topology.select('water and name O')
-
-        # Get coordinates and number of all water oxygens
-        n_aa_water = len(waters)
-        aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
-
-        # Number of CG water molecules based on mapping scheme
-        n_cg_water = int(n_aa_water /  water_bead_mapping)
-        # Water clusters are a list (n_cg_water) of empty lists
-        water_clusters = [[] for i in range(n_cg_water)]
-
-        # Perform the k-means clustering based on the AA water xyz
-        start = time.time()
-        print("Clustering for frame {}".format(frame_index))
-        k_means = cluster.KMeans(n_clusters=n_cg_water)
-        k_means.fit(aa_water_xyz)
-        end = time.time()
-        print("Clustering one frame took: {}".format(end-start))
-
-        # Each cluster index says which cluster an atom belongs to
-        print("Assigning water atoms to water clusters for frame {}".format(frame_index))
-        start = time.time()
-        for atom_index, cluster_index in enumerate(k_means.labels_):
-            # Sort each water atom into the corresponding cluster
-            # The item being added should be an atom index
-            water_clusters[cluster_index].append(waters[atom_index])
-        end = time.time()
-        print("Assigning took: {}".format(end-start))
+    with Pool() as p:
+        p.starmap(_map_waters, [itertools.repeat(traj), itertools.repeat(CG_xyz),
+            itertools.repeat(water_start),range(traj.n_frames)])
 
 
-        # For each cluster, compute enter of mass
-        print("Computing cluster centers for frame {}".format(frame_index))
-        start = time.time()
-        for cg_index, water_cluster in enumerate(water_clusters):
-            com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
-            CG_xyz[frame_index, cg_index + water_start,:] = com
-        end = time.time()
-        print("Computing took: {}".format(end-start))
+    return CG_xyz
+    
 
-    entire_end = time.time()
-    print("XYZ conversion took: {}".format(entire_end - entire_start))
+    #from sklearn import cluster
+    #for frame_index, frame in enumerate(traj):
+    #    # Get atom indices of all water oxygens
+    #    waters = traj.topology.select('water and name O')
+
+    #    # Get coordinates and number of all water oxygens
+    #    n_aa_water = len(waters)
+    #    aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
+
+    #    # Number of CG water molecules based on mapping scheme
+    #    n_cg_water = int(n_aa_water /  water_bead_mapping)
+    #    # Water clusters are a list (n_cg_water) of empty lists
+    #    water_clusters = [[] for i in range(n_cg_water)]
+
+    #    # Perform the k-means clustering based on the AA water xyz
+    #    start = time.time()
+    #    print("Clustering for frame {}".format(frame_index))
+    #    k_means = cluster.KMeans(n_clusters=n_cg_water)
+    #    k_means.fit(aa_water_xyz)
+    #    end = time.time()
+    #    print("Clustering one frame took: {}".format(end-start))
+
+    #    # Each cluster index says which cluster an atom belongs to
+    #    print("Assigning water atoms to water clusters for frame {}".format(frame_index))
+    #    start = time.time()
+    #    for atom_index, cluster_index in enumerate(k_means.labels_):
+    #        # Sort each water atom into the corresponding cluster
+    #        # The item being added should be an atom index
+    #        water_clusters[cluster_index].append(waters[atom_index])
+    #    end = time.time()
+    #    print("Assigning took: {}".format(end-start))
+
+
+    #    # For each cluster, compute enter of mass
+    #    print("Computing cluster centers for frame {}".format(frame_index))
+    #    start = time.time()
+    #    for cg_index, water_cluster in enumerate(water_clusters):
+    #        com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
+    #        CG_xyz[frame_index, cg_index + water_start,:] = com
+    #    end = time.time()
+    #    print("Computing took: {}".format(end-start))
+
+    #entire_end = time.time()
+    #print("XYZ conversion took: {}".format(entire_end - entire_start))
 
 
     return CG_xyz
