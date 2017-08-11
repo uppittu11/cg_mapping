@@ -1,4 +1,5 @@
 import time
+import warnings
 from collections import OrderedDict
 import os
 from optparse import OptionParser
@@ -10,7 +11,7 @@ import cg_mapping
 from cg_mapping.CG_bead import CG_bead
 #import CG_bead
 
-PATH_TO_MAPPINGS='/home/ayang41/Programs/cg_mapping/cg_mapping/mappings/'
+PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
 HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
@@ -133,6 +134,9 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     # Then slice the trajectory and compute hte center of mass for that particular bead
     entire_start = time.time()
     CG_xyz = np.ndarray(shape=(traj.n_frames, len(CG_topology_map),3))
+    water_indices = []
+    print("Converting non-water atoms into beads over all frames")
+    start = time.time()
     for index, bead in enumerate(CG_topology_map):
         if 'HOH' not in bead.resname:
             # Handle non-water residuse with center of mass calculation over all frames
@@ -142,41 +146,59 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
             CG_xyz[:, index, :] = bead_coordinates
         else:
             # Handle waters by initially setting the bead coordinates to zero
+            # Remember which coarse grain indices correspond to water
+            water_indices.append(index)
             CG_xyz[:,index,:] = np.zeros((traj.n_frames,3))
 
-    # Perform kmeans, frame-by-frame, over all water residues
+    end = time.time()
+    print("Converting took: {}".format(end-start))
 
+    # Figure out at which coarse grain index the waters start
+    water_start = min(water_indices)
+
+    # Perform kmeans, frame-by-frame, over all water residues
     from sklearn import cluster
     for frame_index, frame in enumerate(traj):
-        # Get atom indices of all water molecules
-        waters = traj.topology.select('water')
+        # Get atom indices of all water oxygens
+        waters = traj.topology.select('water and name O')
 
-        # This is actually corresponds to each water atom (H, O, H)
+        # Get coordinates and number of all water oxygens
         n_aa_water = len(waters)
         aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
 
-        # Number of CG waters, divided by number of atoms in water 
-        n_cg_water = int(n_aa_water / (3* water_bead_mapping))
+        # Number of CG water molecules based on mapping scheme
+        n_cg_water = int(n_aa_water /  water_bead_mapping)
         # Water clusters are a list (n_cg_water) of empty lists
         water_clusters = [[] for i in range(n_cg_water)]
 
         # Perform the k-means clustering based on the AA water xyz
         start = time.time()
+        print("Clustering for frame {}".format(frame_index))
         k_means = cluster.KMeans(n_clusters=n_cg_water)
         k_means.fit(aa_water_xyz)
         end = time.time()
         print("Clustering one frame took: {}".format(end-start))
 
         # Each cluster index says which cluster an atom belongs to
+        print("Assigning water atoms to water clusters for frame {}".format(frame_index))
+        start = time.time()
         for atom_index, cluster_index in enumerate(k_means.labels_):
             # Sort each water atom into the corresponding cluster
             # The item being added should be an atom index
             water_clusters[cluster_index].append(waters[atom_index])
+        end = time.time()
+        print("Assigning took: {}".format(end-start))
+
 
         # For each cluster, compute enter of mass
+        print("Computing cluster centers for frame {}".format(frame_index))
+        start = time.time()
         for cg_index, water_cluster in enumerate(water_clusters):
             com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
-            CG_xyz[frame_index, cg_index,:] = com
+            CG_xyz[frame_index, cg_index + water_start,:] = com
+        end = time.time()
+        print("Computing took: {}".format(end-start))
+
     entire_end = time.time()
     print("XYZ conversion took: {}".format(entire_end - entire_start))
 
@@ -186,7 +208,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
 
 parser = OptionParser()
 parser.add_option("-f", action="store", type="string", dest = "trajfile", default='last20.xtc')
-parser.add_option("-c", action="store", type="string", dest = "topfile", default='md_pureDSPC.gro')
+parser.add_option("-c", action="store", type="string", dest = "topfile", default='md_pureDSPC.pdb')
 parser.add_option("-o", action="store", type="string", dest = "output", default='traj')
 (options, args) = parser.parse_args()
 
@@ -229,14 +251,15 @@ CG_traj[0].save('cg-{}.gro'.format(options.output))
 CG_traj[0].save('cg-{}.h5'.format(options.output))
 CG_traj[0].save('cg-{}.xyz'.format(options.output))
 
-
-mb_compound = mb.Compound()
-mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
-for particle in mb_compound.particles():
-    particle.name = "_"+ particle.name.strip()
-mb_compound.save('cg-{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
-
-
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    mb_compound = mb.Compound()
+    mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
+    for particle in mb_compound.particles():
+        particle.name = "_"+ particle.name.strip()
+    mb_compound.save('cg-{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
+    
+    
 end=time.time()
 print(end-start)
 
