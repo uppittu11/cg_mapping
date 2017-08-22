@@ -13,7 +13,7 @@ import cg_mapping
 from cg_mapping.CG_bead import CG_bead
 #import CG_bead
 
-PATH_TO_MAPPINGS='/home/ayang41/Programs/cg_mapping/cg_mapping/mappings/'
+PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
 HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
@@ -115,7 +115,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
 
     return CG_topology_map, CG_topology
 
-def _map_waters(traj=None, CG_xyz=None, water_start=0, frame_index=0):
+def _map_waters(traj, water_start, frame_index):
     """ Worker function to parallelize mapping waters via kmeans
 
     Parameters
@@ -127,11 +127,8 @@ def _map_waters(traj=None, CG_xyz=None, water_start=0, frame_index=0):
     water_start : int
         counter denoting which index in the CG coordiantes is water
 
-    Returns
-    ------ nothign?
-    CG_xyz : np.ndarray(n_frame, n_CG_beads, 3)
-
     """
+    from sklearn import cluster
     start = time.time()
     frame = traj[frame_index]
     # Get atom indices of all water oxygens
@@ -139,9 +136,10 @@ def _map_waters(traj=None, CG_xyz=None, water_start=0, frame_index=0):
 
     # Get coordinates and number of all water oxygens
     n_aa_water = len(waters)
-    aa_water_xyz = frame.atom_slice(waters).xyz[:,:]
+    aa_water_xyz = frame.atom_slice(waters).xyz[0,:,:]
 
     # Number of CG water molecules based on mapping scheme
+    water_bead_mapping = 4
     n_cg_water = int(n_aa_water /  water_bead_mapping)
     # Water clusters are a list (n_cg_water) of empty lists
     water_clusters = [[] for i in range(n_cg_water)]
@@ -157,15 +155,17 @@ def _map_waters(traj=None, CG_xyz=None, water_start=0, frame_index=0):
         water_clusters[cluster_index].append(waters[atom_index])
 
 
+    single_frame_coms = []
     # For each cluster, compute enter of mass
     for cg_index, water_cluster in enumerate(water_clusters):
         com = mdtraj.compute_center_of_mass(frame.atom_slice(water_cluster))
-        CG_xyz[frame_index, cg_index + water_start,:] = com
+        single_frame_coms.append((frame_index, cg_index+water_start, com))
+        #CG_xyz[frame_index, cg_index + water_start,:] = com
     end = time.time()
     print("K-means for frame {}: {}".format(frame_index, end-start))
 
-    #return CG_xyz
-
+    return single_frame_coms
+ 
 def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     """Take atomistic trajectory and convert to CG trajectory
 
@@ -207,13 +207,29 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4):
     print("Converting took: {}".format(end-start))
 
     # Figure out at which coarse grain index the waters start
+    print("Converting water beads via k-means")
+    start = time.time()
     water_start = min(water_indices)
 
-    # Perform kmeans, frame-by-frame, over all water residues
-    with Pool() as p:
-        p.starmap(_map_waters, [itertools.repeat(traj), itertools.repeat(CG_xyz),
-            itertools.repeat(water_start),range(traj.n_frames)])
 
+    # Perform kmeans, frame-by-frame, over all water residues
+    # Workers will return centers of masses of clusters, frame index, and cg index
+    # Master will assign to CG_xyz
+    all_frame_coms = []
+    with Pool() as p:
+        all_frame_coms = p.starmap(_map_waters, zip(itertools.repeat(traj), 
+            itertools.repeat(water_start), range(traj.n_frames)))
+
+    end = time.time()
+    print("K-means and converting took: {}".format(end-start))
+
+    print("Writing to CG-xyz")
+    start = time.time()
+    for snapshot in all_frame_coms:
+        for element in snapshot:
+            CG_xyz[element[0],element[1],:] = element[2]
+    end =  time.time()
+    print("Writing took: {}".format(end-start))
 
     return CG_xyz
     
@@ -278,6 +294,7 @@ parser.add_option("-o", action="store", type="string", dest = "output", default=
 
 #pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
 traj = mdtraj.load(options.trajfile, top=options.topfile)
+#traj = mdtraj.load(options.topfile, top=options.topfile)
 topol = traj.topology
 start=time.time()
 # Read in the mapping files, could be made more pythonic
