@@ -285,7 +285,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
 parser = OptionParser()
 parser.add_option("-f", action="store", type="string", dest = "trajfile", default='last20.xtc')
 parser.add_option("-c", action="store", type="string", dest = "topfile", default='md_pureDSPC.pdb')
-parser.add_option("-o", action="store", type="string", dest = "output", default='traj')
+parser.add_option("-o", action="store", type="string", dest = "output", default='cg-traj')
 (options, args) = parser.parse_args()
 
 
@@ -322,10 +322,10 @@ CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
-CG_traj.save('cg-{}.xtc'.format(options.output))
-CG_traj[0].save('cg-{}.gro'.format(options.output))
-CG_traj[0].save('cg-{}.h5'.format(options.output))
-CG_traj[0].save('cg-{}.xyz'.format(options.output))
+CG_traj.save('{}.xtc'.format(options.output))
+CG_traj[0].save('{}.gro'.format(options.output))
+CG_traj[0].save('{}.h5'.format(options.output))
+CG_traj[0].save('{}.xyz'.format(options.output))
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -333,7 +333,7 @@ with warnings.catch_warnings():
     mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
     for particle in mb_compound.particles():
         particle.name = "_"+ particle.name.strip()
-    mb_compound.save('cg-{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
+    mb_compound.save('{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
     
     
 end=time.time()
