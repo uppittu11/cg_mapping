@@ -37,14 +37,25 @@ def _load_mapping(mapfile=None,reverse=False):
         """
 
     mapping_dict = OrderedDict()
+    bonding_info = []
     with open(mapfile,'r') as f:
-        mapping_dict = {line.split(":")[0].rstrip(): 
-                [line.split(":")[1].rstrip(),line.split(":")[2].rstrip().split()] 
-                for line in f if line.rstrip()}
+        for line in f:
+            if line.rstrip():
+                if 'bond' in line.split(":")[0]:
+                    atom_i = line.split(":")[1].split()[0].rstrip()
+                    atom_j = line.split(":")[1].split()[1].rstrip()
+                    bonding_info.append((atom_i, atom_j))
 
-    return mapping_dict
+                else:
+                    mapping_dict.update({line.split(":")[0].rstrip():
+                            [line.split(":")[1].rstrip(), line.split(":")[2].rstrip().split()]})
 
-def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
+    return mapping_dict, bonding_info
+
+
+   
+def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
+        all_bonding_info=None):
     """ Create CG topology from given topology and mapping
 
     Parameters
@@ -55,6 +66,10 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
         mapping dictionaries(CG index, [beadtype, atom indices])
     water_bead_mapping : int
         specifies how many water molecules get mapped to a water CG bead
+    all_bonding_info : dict
+        maps residue names to bonding info arrays 
+        np.ndarray (n, 2)
+
 
     Returns
     -------
@@ -76,6 +91,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
             temp_CG_indices = []
             temp_CG_atoms = []
             temp_CG_beads = [None]*len(molecule_mapping.keys())
+            CG_atoms = []
 
             for index, atom in enumerate(residue.atoms):
                 temp_CG_indices.append(str(index))
@@ -94,10 +110,19 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
                     else:
                         pass
 
+
+            # Add beads to topology by adding atoms
             for index, bead in enumerate(temp_CG_beads):
                 bead.beadindex = index
                 CG_topology_map.append(bead)
-                CG_topology.add_atom(bead.beadtype, bead.beadtype, temp_residue)
+                new_CG_atom = CG_topology.add_atom(bead.beadtype, None, temp_residue)
+                CG_atoms.append(new_CG_atom)
+
+            # Add bonds to topolgoy 
+            bonding_info = all_bonding_info[residue.name]
+            for (index_i, index_j) in bonding_info:
+                CG_topology.add_bond(CG_atoms[int(index_i)], CG_atoms[int(index_j)])
+
         else:
             water_counter +=1
             if water_counter % water_bead_mapping == 0:
@@ -105,7 +130,7 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4):
                 new_bead = CG_bead(beadindex=0, beadtype="P4",
                         resname='HOH')
                 CG_topology_map.append(new_bead)
-                CG_topology.add_atom("P4", "P4", temp_residue)
+                CG_topology.add_atom("P4", None, temp_residue)
 
 
 
@@ -209,77 +234,78 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
     # Figure out at which coarse grain index the waters start
     print("Converting water beads via k-means")
     start = time.time()
-    water_start = min(water_indices)
+    if len(water_indices)>0:
+        water_start = min(water_indices)
 
 
-    # Perform kmeans, frame-by-frame, over all water residues
-    # Workers will return centers of masses of clusters, frame index, and cg index
-    # Master will assign to CG_xyz
-    if parallel:
-        all_frame_coms = []
-        with Pool() as p:
-            all_frame_coms = p.starmap(_map_waters, zip(itertools.repeat(traj), 
-                itertools.repeat(water_start), range(traj.n_frames)))
+        # Perform kmeans, frame-by-frame, over all water residues
+        # Workers will return centers of masses of clusters, frame index, and cg index
+        # Master will assign to CG_xyz
+        if parallel:
+            all_frame_coms = []
+            with Pool() as p:
+                all_frame_coms = p.starmap(_map_waters, zip(itertools.repeat(traj), 
+                    itertools.repeat(water_start), range(traj.n_frames)))
 
-        end = time.time()
-        print("K-means and converting took: {}".format(end-start))
-
-        print("Writing to CG-xyz")
-        start = time.time()
-        for snapshot in all_frame_coms:
-            for element in snapshot:
-                CG_xyz[element[0],element[1],:] = element[2]
-        end =  time.time()
-        print("Writing took: {}".format(end-start))
-
-        return CG_xyz
-    
-    else:
-        from sklearn import cluster
-        for frame_index, frame in enumerate(traj):
-            # Get atom indices of all water oxygens
-            waters = traj.topology.select('water and name O')
-
-            # Get coordinates and number of all water oxygens
-            n_aa_water = len(waters)
-            aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
-
-            # Number of CG water molecules based on mapping scheme
-            n_cg_water = int(n_aa_water /  water_bead_mapping)
-            # Water clusters are a list (n_cg_water) of empty lists
-            water_clusters = [[] for i in range(n_cg_water)]
-
-            # Perform the k-means clustering based on the AA water xyz
-            start = time.time()
-            print("Clustering for frame {}".format(frame_index))
-            k_means = cluster.KMeans(n_clusters=n_cg_water)
-            k_means.fit(aa_water_xyz)
             end = time.time()
-            print("Clustering one frame took: {}".format(end-start))
+            print("K-means and converting took: {}".format(end-start))
 
-            # Each cluster index says which cluster an atom belongs to
-            print("Assigning water atoms to water clusters for frame {}".format(frame_index))
+            print("Writing to CG-xyz")
             start = time.time()
-            for atom_index, cluster_index in enumerate(k_means.labels_):
-                # Sort each water atom into the corresponding cluster
-                # The item being added should be an atom index
-                water_clusters[cluster_index].append(waters[atom_index])
-            end = time.time()
-            print("Assigning took: {}".format(end-start))
+            for snapshot in all_frame_coms:
+                for element in snapshot:
+                    CG_xyz[element[0],element[1],:] = element[2]
+            end =  time.time()
+            print("Writing took: {}".format(end-start))
+
+            return CG_xyz
+        
+        else:
+            from sklearn import cluster
+            for frame_index, frame in enumerate(traj):
+                # Get atom indices of all water oxygens
+                waters = traj.topology.select('water and name O')
+
+                # Get coordinates and number of all water oxygens
+                n_aa_water = len(waters)
+                aa_water_xyz = traj.atom_slice(waters).xyz[frame_index,:,:]
+
+                # Number of CG water molecules based on mapping scheme
+                n_cg_water = int(n_aa_water /  water_bead_mapping)
+                # Water clusters are a list (n_cg_water) of empty lists
+                water_clusters = [[] for i in range(n_cg_water)]
+
+                # Perform the k-means clustering based on the AA water xyz
+                start = time.time()
+                print("Clustering for frame {}".format(frame_index))
+                k_means = cluster.KMeans(n_clusters=n_cg_water)
+                k_means.fit(aa_water_xyz)
+                end = time.time()
+                print("Clustering one frame took: {}".format(end-start))
+
+                # Each cluster index says which cluster an atom belongs to
+                print("Assigning water atoms to water clusters for frame {}".format(frame_index))
+                start = time.time()
+                for atom_index, cluster_index in enumerate(k_means.labels_):
+                    # Sort each water atom into the corresponding cluster
+                    # The item being added should be an atom index
+                    water_clusters[cluster_index].append(waters[atom_index])
+                end = time.time()
+                print("Assigning took: {}".format(end-start))
 
 
-            # For each cluster, compute enter of mass
-            print("Computing cluster centers for frame {}".format(frame_index))
-            start = time.time()
-            for cg_index, water_cluster in enumerate(water_clusters):
-                com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
-                CG_xyz[frame_index, cg_index + water_start,:] = com
-            end = time.time()
-            print("Computing took: {}".format(end-start))
+                # For each cluster, compute enter of mass
+                print("Computing cluster centers for frame {}".format(frame_index))
+                start = time.time()
+                for cg_index, water_cluster in enumerate(water_clusters):
+                    com = mdtraj.compute_center_of_mass(traj.atom_slice(water_cluster)[frame_index])
+                    CG_xyz[frame_index, cg_index + water_start,:] = com
+                end = time.time()
+                print("Computing took: {}".format(end-start))
 
-        entire_end = time.time()
-        print("XYZ conversion took: {}".format(entire_end - entire_start))
-        return CG_xyz
+    entire_end = time.time()
+    print("XYZ conversion took: {}".format(entire_end - entire_start))
+    return CG_xyz
 
 
 parser = OptionParser()
@@ -304,28 +330,34 @@ acd16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16FFA.map')
 # Values are the molecule's mapping dictionary
 # could be made more pythonic
 all_CG_mappings = OrderedDict()
+all_bonding_info = OrderedDict()
 
-molecule_mapping = _load_mapping(mapfile=DSPCmapfile)
+molecule_mapping, molecule_bonding = _load_mapping(mapfile=DSPCmapfile)
 all_CG_mappings.update({'DSPC': molecule_mapping})
+all_bonding_info.update({'DSPC': molecule_bonding})
 
-molecule_mapping = _load_mapping(mapfile=watermapfile)
+molecule_mapping, molecule_bonding = _load_mapping(mapfile=watermapfile)
 all_CG_mappings.update({'HOH': molecule_mapping})
+all_bonding_info.update({'HOH': molecule_bonding})
 
-molecule_mapping = _load_mapping(mapfile=alc16mapfile)
+molecule_mapping, molecule_bonding = _load_mapping(mapfile=alc16mapfile)
 all_CG_mappings.update({'alc16': molecule_mapping})
+all_bonding_info.update({'alc16': molecule_bonding})
 
-molecule_mapping = _load_mapping(mapfile=acd16mapfile)
+molecule_mapping, molecule_bonding = _load_mapping(mapfile=acd16mapfile)
 all_CG_mappings.update({'acd16': molecule_mapping})
+all_bonding_info.update({'acd16': molecule_mapping})
 
-CG_topology_map, CG_topology = _create_CG_topology(topol=topol, all_CG_mappings=all_CG_mappings)
+CG_topology_map, CG_topology = _create_CG_topology(topol=topol, all_CG_mappings=all_CG_mappings, all_bonding_info=all_bonding_info)
 CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
 CG_traj.save('{}.xtc'.format(options.output))
-CG_traj[0].save('{}.gro'.format(options.output))
-CG_traj[0].save('{}.h5'.format(options.output))
-CG_traj[0].save('{}.xyz'.format(options.output))
+CG_traj[-1].save('{}.gro'.format(options.output))
+CG_traj[-1].save('{}.h5'.format(options.output))
+CG_traj[-1].save('{}.xyz'.format(options.output))
+CG_traj[-1].save('{}.pdb'.format(options.output))
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
