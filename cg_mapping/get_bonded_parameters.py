@@ -10,7 +10,8 @@ beadtypes=['P4', 'P3', 'Nda', 'Na', 'C1', 'Qa', 'Q0']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", dest="trajectory", help="Trajectory")
-parser.add_argumnet("-c", dest="topology", help="File with structure/topology info")
+parser.add_argument("-c", dest="topology", help="File with structure/topology info")
+parser.add_argument("-o", dest="output", help="Output for rdf filenames")
 args = parser.parse_args()
 #traj = mdtraj.load("bonded_cg-traj.xtc", top="bonded_cg-traj.pdb")
 traj = mdtraj.load(args.trajectory, top=args.topology)
@@ -42,4 +43,4 @@ print("*"*20)
 print("Generating RDFs")
 print("*"*20)
 for x,y in itertools.product(beadtypes,repeat=2):
-    bulk_DSPC_900K.compute_rdf(x,y,"{}-{}-state_A".format(x,y))
+    bulk_DSPC_900K.compute_rdf(x,y,"{}-{}-{}".format(x,y, args.output))
