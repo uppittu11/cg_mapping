@@ -353,7 +353,7 @@ class State(object):
     
             
         
-    def compute_rdf(traj, atomtype_i, atomtype_j, output):
+    def compute_rdf(self, traj, atomtype_i, atomtype_j, output):
         """
         Compute RDF between pair of atoms, save to text
     
@@ -369,8 +369,8 @@ class State(object):
     
             """
     
-        pairs = traj.topology.select_pairs(selection1='name {}'.format(i),
-                selection2='name {}'.format(j))
+        pairs = traj.topology.select_pairs(selection1='name {}'.format(atomtype_i),
+                selection2='name {}'.format(atomtype_j))
         (first, second) = mdtraj.compute_rdf(traj, pairs, [0, 2], bin_width=0.01 )
         #np.savetxt('{}-{}-{}.txt'.format(i, j, options.output), np.column_stack([first,second]))
         np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))

@@ -25,7 +25,7 @@ print("*"*20)
 print("*"*20)
 print("Bonding parameters")
 print("*"*20)
-for x,y in itertools.product(beadtypes,repeat=2):
+for x, y in itertools.combinations_with_replacement(beadtypes, 2):
     print("---{}-{}---".format(x,y))
     bond_parameters = bulk_DSPC_900K.compute_bond_parameters(traj, x, y)
     print(bond_parameters)
@@ -33,7 +33,7 @@ for x,y in itertools.product(beadtypes,repeat=2):
 print("*"*20)
 print("Angle parameters")
 print("*"*20)
-for x,z in itertools.product(beadtypes,repeat=2):
+for x, z in itertools.combinations_with_replacement(beadtypes, 2):
         for y in beadtypes: 
             print("{}-{}-{}: ".format(x,y,z))
             angle_parameters = bulk_DSPC_900K.compute_angle_parameters(traj, x, y, z)
@@ -42,5 +42,6 @@ for x,z in itertools.product(beadtypes,repeat=2):
 print("*"*20)
 print("Generating RDFs")
 print("*"*20)
-for x,y in itertools.product(beadtypes,repeat=2):
-    bulk_DSPC_900K.compute_rdf(x,y,"{}-{}-{}".format(x,y, args.output))
+for x,y in itertools.combinations_with_replacement(beadtypes, 2):
+    print("---{}-{}---".format(x,y))
+    bulk_DSPC_900K.compute_rdf(traj, x,y,"{}-{}-{}".format(x,y, args.output))
