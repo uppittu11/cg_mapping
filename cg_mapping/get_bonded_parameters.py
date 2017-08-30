@@ -1,7 +1,10 @@
-import cg_utils
-from cg_utils import *
+from cg_mapping import *
 import mdtraj
+import itertools
 
+""" Simple script to iterate through all bead types
+and compute bond/angle parameters by fitting to
+Gaussian distributions"""
 beadtypes=['P4', 'P3', 'Nda', 'Na', 'C1', 'Qa', 'Q0']
 
 
