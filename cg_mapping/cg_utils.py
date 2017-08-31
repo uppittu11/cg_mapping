@@ -204,12 +204,13 @@ class State(object):
             bin_width = second_bin - first_bin
             if probability - 1e-6 <=0:
                 probability = 1e-6
-            #energy = -k_b * T * np.log(probability * bin_width)
-            energy = 10000 -self._k_b * self._T * np.log(probability)
+            energy = -self._k_b * self._T * np.log(probability)
             distance = np.mean((bins[index], bins[index+1]))
             all_energies.append(energy)
             all_distances.append(distance)
-    
+        # Shift energies to positive numbers
+        min_shift = min(all_energies)
+        all_energies = [energy - min_shift for energy in all_energies]
         try:
             bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
         except RuntimeError:
@@ -324,9 +325,13 @@ class State(object):
                 probability = 1e-6
             angle = np.mean((bins[index], bins[index+1]))
             scaled_probability = probability/np.sin(angle)
-            energy = 10000 -self._k_b * self._T * np.log(scaled_probability)
+            energy = -self._k_b * self._T * np.log(scaled_probability)
             all_energies.append(energy)
             all_angles.append(angle)
+
+        # Shift energies to positive numbers
+        min_shift = min(all_energies)
+        all_energies = [energy - min_shift for energy in all_energies]
     
         # Before fitting, may need to reflect energies about a particular angle
         mirror_angles = np.zeros_like(all_angles)
