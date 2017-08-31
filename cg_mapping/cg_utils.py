@@ -212,8 +212,6 @@ class State(object):
         min_shift = min(all_energies)
         all_energies = [energy - min_shift for energy in all_energies]
         try:
-            bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
-        except RuntimeError:
             # Slice data to be center the fit around the minima
             min_index = np.argmin(all_energies)
             sliced_distances = all_distances[min_index-5: min_index+5]
@@ -221,6 +219,9 @@ class State(object):
 
             bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_energies)
 
+        except RuntimeError:
+            bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
+        
         predicted_energies = self.harmonic_energy(all_distances, **bonded_parameters)
         fig, axarray = plt.subplots(2,1,sharex=True)
         axarray[0].plot(all_distances, predicted_energies, c='darkgray', label="Predicted")
