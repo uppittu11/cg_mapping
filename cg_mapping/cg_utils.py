@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 import pdb
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from collections import Counter
 
 class State(object):
     """ Container to store basic thermodynamic information
@@ -211,17 +212,25 @@ class State(object):
         # Shift energies to positive numbers
         min_shift = min(all_energies)
         all_energies = [energy - min_shift for energy in all_energies]
-        try:
-            # Slice data to be center the fit around the minima
-            min_index = np.argmin(all_energies)
-            sliced_distances = all_distances[min_index-5: min_index+5]
-            sliced_energies = all_energies[min_index-5: min_index+5]
+        min_index = np.argmin(all_energies)
+        converged = False
+        i = 3
+        while not converged:
+            try:
+                # Slice data to be center the fit around the minima
+                sliced_distances = all_distances[min_index-i: min_index+i]
+                sliced_energies = all_energies[min_index-i: min_index+i]
 
-            bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_energies)
+                bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_energies)
+                converged=True
 
-        except RuntimeError:
-            bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
-        
+            except RuntimeError:
+                i +=1
+                if min_index + i >= 50 or min_index -i <= 0:
+                    bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
+                    converged=True
+            
+
         predicted_energies = self.harmonic_energy(all_distances, **bonded_parameters)
         fig, axarray = plt.subplots(2,1,sharex=True)
         axarray[0].plot(all_distances, predicted_energies, c='darkgray', label="Predicted")
@@ -268,7 +277,9 @@ class State(object):
         """
     
         topol = traj.topology
-        target_triplet = set((atomtype_i, atomtype_j, atomtype_k))
+        #target_triplet = set((atomtype_i, atomtype_j, atomtype_k))
+        target_triplet = [atomtype_i, atomtype_j, atomtype_k]
+        target_counter = Counter(target_triplet)
         all_triplets = []
         participating_bonds = []
         if len([(i,j) for i,j in topol.bonds]) == 0:
@@ -279,20 +290,31 @@ class State(object):
         # If (1,2) and (2,4) then (1,2,4) is a triplet
         for (i, j) in topol.bonds:
             # If i.name and j.name aren't in the target_triplet, ignore it
-            if set((i.name, j.name)) <= set(target_triplet) and \
-                    len(set((i.name, j.name))) == 2:
-                participating_bonds.append([i, j])
+            pair = Counter([i.name,j.name])
+            diff = target_counter - pair
+            if len([i for i in diff.elements()]) == 1 :
+                participating_bonds.append([i,j])
+
+
 
         # Iterate through all combinations of participating bonds
-        # If they share the same atomtype_j, then this is a hit
+        # If they share the same atom (atomtype_j), then this is a hit
+        # The set of the 2 pairs must also have length 3 (one atom in common)
+        # The names must all match up to the target triplet names
         for pair1, pair2 in itertools.combinations(participating_bonds,2):
             triplet_set = set((*pair1, *pair2))
-            difference = sorted([a.index for a in set((pair1)).symmetric_difference((pair2))])
+            temp_triplet = target_triplet
+            all_pair_names = [i.name for i in pair1] + [j.name for j in pair2]
+            for i in all_pair_names:
+                try:
+                    temp_triplet.remove(i)
+                except ValueError:
+                    pass
+            sym_diff = sorted([a.index for a in set((pair1)).symmetric_difference((pair2))])
             intersection = [a for a in set((pair1)).intersection(set((pair2)))]
-            if len(triplet_set) == 3 and len(intersection) == 1 \
-                and len(difference) == 2 and atomtype_j in intersection[0].name:
-                all_triplets.append([difference[0], intersection[0].index,
-                    difference[1]])
+            if len(triplet_set) == 3 and len(intersection) == 1 and atomtype_j in intersection[0].name and len(temp_triplet)==0:
+                all_triplets.append([sym_diff[0], intersection[0].index,
+                    sym_diff[1]])
     
         if len(all_triplets) == 0:
             return None
@@ -333,19 +355,44 @@ class State(object):
         # Shift energies to positive numbers
         min_shift = min(all_energies)
         all_energies = [energy - min_shift for energy in all_energies]
-    
-        # Before fitting, may need to reflect energies about a particular angle
-        mirror_angles = np.zeros_like(all_angles)
-        mirror_energies = np.zeros_like(all_energies)
-        for i, val in enumerate(all_angles):
-            mirror_energies[i] = all_energies[-i-1]
-            mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
-    
-        all_angles.extend(mirror_angles)
-        all_energies.extend(mirror_energies)
-    
-    
-        bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+        min_index = np.argmin(all_energies)
+        
+        converged = False
+        i = 3
+        while not converged:
+            try:
+                bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
+                converged = True
+            except RuntimeError:
+                i += 1
+                if min_index + i >= 50:
+                    # Before fitting, may need to reflect energies about a particular angle
+                    mirror_angles = np.zeros_like(all_angles)
+                    mirror_energies = np.zeros_like(all_energies)
+                    for i, val in enumerate(all_angles):
+                        mirror_energies[i] = all_energies[-i-1]
+                        mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
+                
+                    all_angles.extend(mirror_angles)
+                    all_energies.extend(mirror_energies)
+                    bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+                    converged = True
+
+
+        #try:
+        #    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-10:min_index+10], all_energies[min_index-10:min_index+10])
+        #except RuntimeError:
+        #    # Before fitting, may need to reflect energies about a particular angle
+        #    mirror_angles = np.zeros_like(all_angles)
+        #    mirror_energies = np.zeros_like(all_energies)
+        #    for i, val in enumerate(all_angles):
+        #        mirror_energies[i] = all_energies[-i-1]
+        #        mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
+        #
+        #    all_angles.extend(mirror_angles)
+        #    all_energies.extend(mirror_energies)
+        #    bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+
         predicted_energies = self.harmonic_energy(all_angles, **bonded_parameters)
         fig, axarray = plt.subplots(2,1,sharex=True)
         axarray[0].plot(all_angles, predicted_energies, c='darkgray', label="Predicted")
