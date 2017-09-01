@@ -1,4 +1,5 @@
 import mdtraj
+import math
 import numpy as np
 import itertools
 import matplotlib
@@ -43,26 +44,27 @@ class State(object):
         return("k_B = {} \nT = {}".format(self.k_b, self.T))
     
 
-    def gaussian(x, a, x0, sigma):
+    def gaussian(self, x,  x0, w, A):
         """ Generic gaussian function
     
         Parameters
         ----------
-        a : float
-            constant
         x0 : float
             Mean around which gaussian is centered
-        sigma : float
-            Standard deviation
+        w : float
+            width of gaussian
+        A : float
+            Total area of gaussian
     
         Returns
         -------
+        Probability
     
         Notes
         -----
         Equation form follows Milano, Goudeau, and Muller-Plathe (2005)
         """
-        return a*np.exp(-2*(x-x0)**2/(sigma**2))
+        return (A/(w*np.sqrt(np.pi/2))) * np.exp(-2*(x-x0)**2/(w**2))
     
     def gaussian_to_energy(self, x, constant, a, x0):
         """ Compute energy distribution from gaussian distribution
@@ -122,24 +124,34 @@ class State(object):
         """
         return force_constant*(x_val-x0)
     
-    def fit_to_gaussian(self, all_distances, all_energies):
-        """ Fit energies to gaussian distribution
+    def fit_to_gaussian(self, independent_vars, probabilities):
+        """ Fit values to gaussian distribution
     
         Parameters
         ----------
-        all_distances : list()
-        all_energies : list()
+        independent_vars : list()
+            Likely the bond lengths or angles
+        probabilities : list()
     
         Returns
         -------
         harmonic_parameters : dict()
             force_constant, x0
+
+        Notes
+        -----
             """
     
-        params, covar = curve_fit(self.gaussian_to_energy, all_distances, all_energies)
-        constant = params[0]
-        force_constant = params[1]
-        x0 = params[2]
+        # Fit probabilities to gaussian
+        params, covar = curve_fit(self.gaussian, independent_vars, 
+                probabilities)#, method='dogbox', bounds = [(0,0,-np.inf), 
+                    #(np.inf, np.inf, np.inf)])
+        x0 = params[0]
+        w = params[1]
+        A = params[2]
+
+        # Extracts sprint constant
+        force_constant = self._k_b * self._T/w**2
         bonded_parameters={'force_constant': force_constant, 'x0': x0}
     
         return bonded_parameters
@@ -187,7 +199,7 @@ class State(object):
     
         fig,ax =  plt.subplots(1,1)
         # 51 bins, 50 probabilities
-        vals, bins, patches = ax.hist(bond_distances.flatten(), 50, normed=1)
+        all_probabilities, bins, patches = ax.hist(bond_distances.flatten(), 50, normed=1)
         ax.set_xlabel("Distance (nm)")
         ax.set_ylabel("Probability")
         plt.savefig("{}-{}_bond_distribution.jpg".format(atomtype_i, atomtype_j))
@@ -199,7 +211,7 @@ class State(object):
         all_energies = []
         all_distances = []
     
-        for index, probability in enumerate(vals):
+        for index, probability in enumerate(all_probabilities):
             first_bin = bins[index]
             second_bin = bins[index+1]
             bin_width = second_bin - first_bin
@@ -214,20 +226,23 @@ class State(object):
         all_energies = [energy - min_shift for energy in all_energies]
         min_index = np.argmin(all_energies)
         converged = False
-        i = 3
+        i = 2
         while not converged:
             try:
                 # Slice data to be center the fit around the minima
                 sliced_distances = all_distances[min_index-i: min_index+i]
                 sliced_energies = all_energies[min_index-i: min_index+i]
+                sliced_probabilities = all_probabilities[min_index-i: min_index+i]
 
-                bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_energies)
+                #bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_energies)
+                bonded_parameters = self.fit_to_gaussian(sliced_distances, sliced_probabilities)
                 converged=True
 
             except RuntimeError:
                 i +=1
                 if min_index + i >= 50 or min_index -i <= 0:
-                    bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
+                    #bonded_parameters = self.fit_to_gaussian(all_distances, all_energies)
+                    bonded_parameters = self.fit_to_gaussian(all_distances, all_probabilities)
                     converged=True
             
 
@@ -303,7 +318,7 @@ class State(object):
         # The names must all match up to the target triplet names
         for pair1, pair2 in itertools.combinations(participating_bonds,2):
             triplet_set = set((*pair1, *pair2))
-            temp_triplet = target_triplet
+            temp_triplet = [atomtype_i, atomtype_j, atomtype_k]
             all_pair_names = [i.name for i in pair1] + [j.name for j in pair2]
             for i in all_pair_names:
                 try:
@@ -327,7 +342,7 @@ class State(object):
     
         fig,ax =  plt.subplots(1,1)
         # 51 bins, 50 probabilities
-        vals, bins, patches = ax.hist(all_angles_rad.flatten(), 50, normed=1)
+        vals, bins, patches = ax.hist([value for value in all_angles_rad.flatten() if not math.isnan(value)], 50, normed=1)
         ax.set_xlabel("Angle (rad)")
         ax.set_ylabel("Probability")
         plt.savefig("{}-{}-{}_angle_distribution.jpg".format(atomtype_i, atomtype_j, 
@@ -339,6 +354,7 @@ class State(object):
         # For each probability, compute energy and assign it appropriately
         all_energies = []
         all_angles = []
+        all_probabilities = []
     
         for index, probability in enumerate(vals):
             first_bin = bins[index]
@@ -351,6 +367,7 @@ class State(object):
             energy = -self._k_b * self._T * np.log(scaled_probability)
             all_energies.append(energy)
             all_angles.append(angle)
+            all_probabilities.append(scaled_probability)
 
         # Shift energies to positive numbers
         min_shift = min(all_energies)
@@ -358,40 +375,31 @@ class State(object):
         min_index = np.argmin(all_energies)
         
         converged = False
-        i = 3
+        i = 2
         while not converged:
             try:
-                bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
+                #bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
+                bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
                 converged = True
             except RuntimeError:
                 i += 1
-                if min_index + i >= 50:
+                if min_index + i >= 50 or min_index -i <=0:
                     # Before fitting, may need to reflect energies about a particular angle
                     mirror_angles = np.zeros_like(all_angles)
                     mirror_energies = np.zeros_like(all_energies)
+                    mirror_probabilities = np.zeros_like(all_probabilities)
                     for i, val in enumerate(all_angles):
                         mirror_energies[i] = all_energies[-i-1]
+                        mirror_probabilities[i] = all_energies[-i-1]
                         mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
                 
                     all_angles.extend(mirror_angles)
                     all_energies.extend(mirror_energies)
-                    bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+                    all_probabilities.extend(mirror_probabilities)
+
+                    #bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+                    bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
                     converged = True
-
-
-        #try:
-        #    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-10:min_index+10], all_energies[min_index-10:min_index+10])
-        #except RuntimeError:
-        #    # Before fitting, may need to reflect energies about a particular angle
-        #    mirror_angles = np.zeros_like(all_angles)
-        #    mirror_energies = np.zeros_like(all_energies)
-        #    for i, val in enumerate(all_angles):
-        #        mirror_energies[i] = all_energies[-i-1]
-        #        mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
-        #
-        #    all_angles.extend(mirror_angles)
-        #    all_energies.extend(mirror_energies)
-        #    bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
 
         predicted_energies = self.harmonic_energy(all_angles, **bonded_parameters)
         fig, axarray = plt.subplots(2,1,sharex=True)
