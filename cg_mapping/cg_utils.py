@@ -153,15 +153,17 @@ class State(object):
 
             # Extracts sprint constant
             force_constant = self._k_b * self._T/w**2
-            bonded_parameters={'force_constant': force_constant, 'x0': x0}
+            #bonded_parameters={'force_constant': force_constant, 'x0': x0}
         # Fit gaussian energies
         else:
             params, covar = curve_fit(self.gaussian_to_energy, independent_vars,
-                    dependent_vars)
-            constnat = params[0]
+                    dependent_vars, method='dogbox', bounds=[(-np.inf,0,0), 
+                        (np.inf, np.inf, np.inf)])
+            constant = params[0]
             force_constant = params[1]
             x0 = params[2]
     
+        bonded_parameters={'force_constant': force_constant, 'x0': x0}
         return bonded_parameters
     
     def compute_bond_parameters(self, traj, atomtype_i, atomtype_j):
@@ -396,12 +398,20 @@ class State(object):
             try:
                 #bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
                 bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
-                converged = True
+                if bonded_parameters['force_constant'] > 0.01:
+                    converged = True
+                else:
+                    converged = False
+                    i += 1
             except RuntimeError:
 
                 try:
                     bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i], energy_fit=True)
-                    converged=True
+                    if bonded_parameters['force_constant'] > 0.01:
+                        converged = True
+                    else: 
+                        converged = False
+                        i += 1
                 except RuntimeError:
                     i += 1
                     if min_index + i >= 50 or min_index -i <=0:
