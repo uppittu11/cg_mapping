@@ -1,4 +1,5 @@
 import time
+import pdb
 import warnings
 import itertools
 from multiprocessing import Pool
@@ -307,6 +308,11 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
     print("XYZ conversion took: {}".format(entire_end - entire_start))
     return CG_xyz
 
+def compute_avg_box(traj):
+    """ Compute average box lengths"""
+
+    return np.mean(traj.unitcell_lengths, axis=0)
+
 
 parser = OptionParser()
 parser.add_option("-f", action="store", type="string", dest = "trajfile", default='last20.xtc')
@@ -353,6 +359,7 @@ CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
+
 CG_traj.save('{}.xtc'.format(options.output))
 CG_traj[-1].save('{}.gro'.format(options.output))
 CG_traj[-1].save('{}.h5'.format(options.output))
@@ -363,11 +370,24 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     mb_compound = mb.Compound()
     mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
+    # Tile this using grid 3d pattern
+    cube = mb.Grid3DPattern(2,2,2)
+    original_box = mb.Box(lengths=[length for length in mb_compound.periodicity])
+    new_box = mb.Box(lengths=[2*length for length in original_box.lengths])
+    cube.scale([2*length for length in original_box.lengths])
+    replicated = cube.apply(mb_compound)
+    mirrored_image = mb.Compound()
+    for item in replicated:
+        mirrored_image.add(item)
     for particle in mb_compound.particles():
         particle.name = "_"+ particle.name.strip()
-    mb_compound.save('{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True)
+    for particle in mirrored_image.particles():
+        particle.name = "_"+ particle.name.strip()
+    mb_compound.save('{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=original_box)
+    mirrored_image.save('{}_2x2x2.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=new_box)
+
     
-    
+print("Avg box length: {}".format(compute_avg_box(traj)))
 end=time.time()
 print(end-start)
 
