@@ -166,7 +166,7 @@ class State(object):
         bonded_parameters={'force_constant': force_constant, 'x0': x0}
         return bonded_parameters
     
-    def compute_bond_parameters(self, traj, atomtype_i, atomtype_j):
+    def compute_bond_parameters(self, traj, atomtype_i, atomtype_j, plot=False):
         """
         Calculate bonded parameters from a trajectory
         Compute the probability distribution of bond lengths
@@ -210,10 +210,11 @@ class State(object):
         fig,ax =  plt.subplots(1,1)
         # 51 bins, 50 probabilities
         all_probabilities, bins, patches = ax.hist(bond_distances.flatten(), 50, normed=1)
-        ax.set_xlabel("Distance (nm)")
-        ax.set_ylabel("Probability")
-        plt.savefig("{}-{}_bond_distribution.jpg".format(atomtype_i, atomtype_j))
-        plt.close()
+        if plot:
+            ax.set_xlabel("Distance (nm)")
+            ax.set_ylabel("Probability")
+            plt.savefig("{}-{}_bond_distribution.jpg".format(atomtype_i, atomtype_j))
+            plt.close()
     
     
         # Need to compute energies from the probabilities
@@ -257,22 +258,23 @@ class State(object):
             
 
         predicted_energies = self.harmonic_energy(all_distances, **bonded_parameters)
-        fig, axarray = plt.subplots(2,1,sharex=True)
-        axarray[0].plot(all_distances, predicted_energies, c='darkgray', label="Predicted")
-        axarray[1].plot(all_distances, all_energies, c='black', label="Target")
-        axarray[0].legend()
-        axarray[1].legend()
-        axarray[1].set_xlabel("Distance (nm)")
-        axarray[0].set_ylabel("Energy (kJ/mol)")
-        axarray[1].set_ylabel("Energy (kJ/mol)")
-        plt.savefig("{}-{}_bond_energies.jpg".format(atomtype_i, atomtype_j))
-        plt.close()
+        if plot:
+            fig, axarray = plt.subplots(2,1,sharex=True)
+            axarray[0].plot(all_distances, predicted_energies, c='darkgray', label="Predicted")
+            axarray[1].plot(all_distances, all_energies, c='black', label="Target")
+            axarray[0].legend()
+            axarray[1].legend()
+            axarray[1].set_xlabel("Distance (nm)")
+            axarray[0].set_ylabel("Energy (kJ/mol)")
+            axarray[1].set_ylabel("Energy (kJ/mol)")
+            plt.savefig("{}-{}_bond_energies.jpg".format(atomtype_i, atomtype_j))
+            plt.close()
         return bonded_parameters
     
     
     
     
-    def compute_angle_parameters(self, traj, atomtype_i, atomtype_j, atomtype_k):
+    def compute_angle_parameters(self, traj, atomtype_i, atomtype_j, atomtype_k, plot=False):
         """
         Calculate angle parameters from a trajectory
         Compute the probability distribution of angles
@@ -355,9 +357,10 @@ class State(object):
         vals, bins, patches = ax.hist([value for value in all_angles_rad.flatten() if not math.isnan(value)], 50, normed=1)
         ax.set_xlabel("Angle (rad)")
         ax.set_ylabel("Probability")
-        plt.savefig("{}-{}-{}_angle_distribution.jpg".format(atomtype_i, atomtype_j, 
+        if plot:
+            plt.savefig("{}-{}-{}_angle_distribution.jpg".format(atomtype_i, atomtype_j, 
             atomtype_k))
-        plt.close()
+            plt.close()
     
     
         # Need to compute energies from the probabilities
@@ -379,13 +382,14 @@ class State(object):
             all_angles.append(angle)
             all_probabilities.append(scaled_probability)
 
-        fig, ax = plt.subplots(1,1)
-        ax.plot(all_angles, all_probabilities, label="Scaled probabilities")
-        ax.set_xlabel("Angle (rad)")
-        ax.set_ylabel("Probability")
-        ax.legend()
-        plt.savefig("{}-{}-{}-scaled_probabilities.jpg".format(atomtype_i, atomtype_j, atomtype_k))
-        plt.close()
+        if plot:
+            fig, ax = plt.subplots(1,1)
+            ax.plot(all_angles, all_probabilities, label="Scaled probabilities")
+            ax.set_xlabel("Angle (rad)")
+            ax.set_ylabel("Probability")
+            ax.legend()
+            plt.savefig("{}-{}-{}-scaled_probabilities.jpg".format(atomtype_i, atomtype_j, atomtype_k))
+            plt.close()
 
         # Shift energies to positive numbers
         min_shift = min(all_energies)
@@ -437,16 +441,17 @@ class State(object):
                         converged = True
 
         predicted_energies = self.harmonic_energy(all_angles, **bonded_parameters)
-        fig, axarray = plt.subplots(2,1,sharex=True)
-        axarray[0].plot(all_angles, predicted_energies, c='darkgray', label="Predicted")
-        axarray[1].plot(all_angles, all_energies, c='black', label="Target")
-        axarray[0].legend()
-        axarray[1].legend()
-        axarray[1].set_xlabel("Angle (rad)")
-        axarray[0].set_ylabel("Energy (kJ/mol)")
-        axarray[1].set_ylabel("Energy (kJ/mol)")
-        plt.savefig("{}-{}-{}_angle_energies.jpg".format(atomtype_i, atomtype_j, atomtype_k))
-        plt.close()
+        if plot:
+            fig, axarray = plt.subplots(2,1,sharex=True)
+            axarray[0].plot(all_angles, predicted_energies, c='darkgray', label="Predicted")
+            axarray[1].plot(all_angles, all_energies, c='black', label="Target")
+            axarray[0].legend()
+            axarray[1].legend()
+            axarray[1].set_xlabel("Angle (rad)")
+            axarray[0].set_ylabel("Energy (kJ/mol)")
+            axarray[1].set_ylabel("Energy (kJ/mol)")
+            plt.savefig("{}-{}-{}_angle_energies.jpg".format(atomtype_i, atomtype_j, atomtype_k))
+            plt.close()
 
    
         return bonded_parameters
