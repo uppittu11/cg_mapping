@@ -321,9 +321,10 @@ parser.add_option("-o", action="store", type="string", dest = "output", default=
 (options, args) = parser.parse_args()
 
 
-#trajfile = "last20.xtc"
+print("Trajectory: {}".format(options.trajfile))
+print("Topology: {}".format(options.topfile))
+print("Output: {}".format(options.output))
 
-#pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
 traj = mdtraj.load(options.trajfile, top=options.topfile)
 topol = traj.topology
 start=time.time()
@@ -360,6 +361,10 @@ CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
 
+
+avg_box_lengths = compute_avg_box(traj)
+print("Avg box length: {}".format(avg_box_lengths))
+
 CG_traj.save('{}.xtc'.format(options.output))
 CG_traj[-1].save('{}.gro'.format(options.output))
 CG_traj[-1].save('{}.h5'.format(options.output))
@@ -370,24 +375,29 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     mb_compound = mb.Compound()
     mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
+    original_box = mb.Box(lengths=[length for length in mb_compound.periodicity])
+
     # Tile this using grid 3d pattern
     cube = mb.Grid3DPattern(2,2,2)
-    original_box = mb.Box(lengths=[length for length in mb_compound.periodicity])
-    new_box = mb.Box(lengths=[2*length for length in original_box.lengths])
-    cube.scale([2*length for length in original_box.lengths])
+    # Define a new box based on average box lengths from AA traj, scaled by 8
+    new_box = mb.Box(lengths=[2*length for length in avg_box_lengths])
+    # Scale pattern lengths based on the new box lengths
+    cube.scale([length for length in new_box.lengths])
     replicated = cube.apply(mb_compound)
     mirrored_image = mb.Compound()
     for item in replicated:
         mirrored_image.add(item)
+
+    # Particle renaming due to mbuild coarsegrained format
     for particle in mb_compound.particles():
         particle.name = "_"+ particle.name.strip()
     for particle in mirrored_image.particles():
         particle.name = "_"+ particle.name.strip()
+
     mb_compound.save('{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=original_box)
     mirrored_image.save('{}_2x2x2.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=new_box)
 
     
-print("Avg box length: {}".format(compute_avg_box(traj)))
 end=time.time()
 print(end-start)
 
