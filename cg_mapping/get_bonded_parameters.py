@@ -8,7 +8,7 @@ import argparse
 """ Simple script to iterate through all bead types
 and compute bond/angle parameters by fitting to
 Gaussian distributions"""
-beadtypes=['P4', 'P3', 'Nda', 'Na', 'C1', 'Qa', 'Q0']
+beadtypes=['P4', 'P3', 'Nda', 'Na', 'C2', 'C1', 'Qa', 'Q0']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-f", dest="trajectory", help="Trajectory")
@@ -16,7 +16,7 @@ parser.add_argument("-c", dest="topology", help="File with structure/topology in
 parser.add_argument("-o", dest="output", help="Output for rdf filenames")
 args = parser.parse_args()
 #traj = mdtraj.load("bonded_cg-traj.xtc", top="bonded_cg-traj.pdb")
-#traj = mdtraj.load(args.trajectory, top=args.topology)
+traj = mdtraj.load(args.trajectory, top=args.topology)
 all_atoms = [a.name for a in traj.topology.atoms]
 
 bulk_DSPC_900K = cg_utils.State(k_b=8.314e-3, T=900)
