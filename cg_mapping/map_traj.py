@@ -321,10 +321,9 @@ parser.add_option("-o", action="store", type="string", dest = "output", default=
 (options, args) = parser.parse_args()
 
 
-print("Trajectory: {}".format(options.trajfile))
-print("Topology: {}".format(options.topfile))
-print("Output: {}".format(options.output))
+#trajfile = "last20.xtc"
 
+#pdbfile = "md_DSPC-34_alc16-33_acd16-33_1-27b.gro"
 traj = mdtraj.load(options.trajfile, top=options.topfile)
 topol = traj.topology
 start=time.time()
@@ -376,6 +375,15 @@ with warnings.catch_warnings():
     mb_compound = mb.Compound()
     mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
     original_box = mb.Box(lengths=[length for length in mb_compound.periodicity])
+
+    # Because we are resizing the box based on the average box over the trajectory,
+    # we need to scale the coordinates appropriately, since they are taken only
+    # from the final frame.
+    scaling_ratio = [new/old for old, new in zip(original_box.lengths, avg_box_lengths)]
+    print("scaling_ratio: {}".format(scaling_ratio))
+    for particle in mb_compound.particles():
+        for i, frame in enumerate(particle.xyz):
+            particle.xyz[i] = [factor*coord for factor, coord in zip(scaling_ratio, particle.xyz[i])]
 
     # Tile this using grid 3d pattern
     cube = mb.Grid3DPattern(2,2,2)
