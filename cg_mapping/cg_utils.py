@@ -8,6 +8,7 @@ import pdb
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from collections import Counter
+from msibi.utils.find_exclusions import find_1_n_exclusions
 
 class State(object):
     """ Container to store basic thermodynamic information
@@ -460,7 +461,7 @@ class State(object):
     
             
         
-    def compute_rdf(self, traj, atomtype_i, atomtype_j, output):
+    def compute_rdf(self, traj, atomtype_i, atomtype_j, output, exclude_up_to=2):
         """
         Compute RDF between pair of atoms, save to text
     
@@ -473,12 +474,29 @@ class State(object):
             Second atomtype
         output : str
             Filename
+        exclude_up_to : int
+            Exclude up to this many bonded terms for RDF calculation
+            i.e., exclude_up_to=2 means 1-2 and 1-3 bonds are excluded from RDF
+
+        Notes
+        -----
+        Be VERY aware of the exclusion terms for computing RDFs
     
             """
     
+        """ Mine
         pairs = traj.topology.select_pairs(selection1='name {}'.format(atomtype_i),
                 selection2='name {}'.format(atomtype_j))
         (first, second) = mdtraj.compute_rdf(traj, pairs, [0, 2], bin_width=0.01 )
-        #np.savetxt('{}-{}-{}.txt'.format(i, j, options.output), np.column_stack([first,second]))
+        np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))
+        """
+
+
+        pairs = traj.topology.select_pairs("name '{0}'".format(atomtype_i),
+                                 "name '{0}'".format(atomtype_j))
+        if exclude_up_to is not None:
+            to_delete = find_1_n_exclusions(traj.topology, pairs, exclude_up_to)
+            pairs = np.delete(pairs, to_delete, axis=0)
+        (first, second) = mdtraj.compute_rdf(traj, pairs, [0,2], bin_width=0.01)
         np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))
     
