@@ -1,4 +1,5 @@
 import mdtraj
+import sys
 import math
 import numpy as np
 import itertools
@@ -461,7 +462,8 @@ class State(object):
     
             
         
-    def compute_rdf(self, traj, atomtype_i, atomtype_j, output, exclude_up_to=2):
+    def compute_rdf(self, traj, atomtype_i, atomtype_j, output, 
+            bin_width=0.01, exclude_up_to=2):
         """
         Compute RDF between pair of atoms, save to text
     
@@ -497,6 +499,6 @@ class State(object):
         if exclude_up_to is not None:
             to_delete = find_1_n_exclusions(traj.topology, pairs, exclude_up_to)
             pairs = np.delete(pairs, to_delete, axis=0)
-        (first, second) = mdtraj.compute_rdf(traj, pairs, [0,2], bin_width=0.01)
+        (first, second) = mdtraj.compute_rdf(traj, pairs, [0,2], bin_width=bin_width)
         np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))
     

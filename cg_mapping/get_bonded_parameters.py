@@ -19,9 +19,9 @@ args = parser.parse_args()
 traj = mdtraj.load(args.trajectory, top=args.topology)
 all_atoms = [a.name for a in traj.topology.atoms]
 
-bulk_DSPC_900K = cg_utils.State(k_b=8.314e-3, T=900)
+system_state = cg_utils.State(k_b=8.314e-3, T=900)
 print("*"*20)
-print(bulk_DSPC_900K)
+print(system_state)
 print("*"*20)
 
 print("*"*20)
@@ -31,7 +31,7 @@ all_bonding_parameters = pd.DataFrame(columns=['#bond', 'force_constant','x0'])
 
 for x,y in itertools.combinations_with_replacement(beadtypes, 2):
     print("---{}-{}---".format(x,y))
-    bond_parameters = bulk_DSPC_900K.compute_bond_parameters(traj, x, y)
+    bond_parameters = system_state.compute_bond_parameters(traj, x, y)
     print(bond_parameters)
     if bond_parameters:
         all_bonding_parameters.loc[len(all_bonding_parameters)] = \
@@ -47,7 +47,7 @@ all_angle_parameters = pd.DataFrame(columns=['#angle','force_constant', 'x0'])
 for x,z in itertools.combinations_with_replacement(beadtypes, 2):
         for y in beadtypes: 
             print("{}-{}-{}: ".format(x,y,z))
-            angle_parameters = bulk_DSPC_900K.compute_angle_parameters(traj, x, y, z)
+            angle_parameters = system_state.compute_angle_parameters(traj, x, y, z)
             print(angle_parameters)
             if angle_parameters:
                 all_angle_parameters.loc[len(all_angle_parameters)] = \
@@ -61,4 +61,4 @@ print("Generating RDFs")
 print("*"*20)
 for x,y in itertools.combinations_with_replacement(beadtypes, 2):
     print("---{}-{}---".format(x,y))
-    bulk_DSPC_900K.compute_rdf(traj, x,y,"{}-{}-{}".format(x,y, args.output))
+    system_state.compute_rdf(traj, x,y,"{}-{}-{}".format(x,y, args.output))
