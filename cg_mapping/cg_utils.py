@@ -463,7 +463,7 @@ class State(object):
             
         
     def compute_rdf(self, traj, atomtype_i, atomtype_j, output, 
-            bin_width=0.01, exclude_up_to=2):
+            bin_width=0.01, exclude_up_to=3):
         """
         Compute RDF between pair of atoms, save to text
     
