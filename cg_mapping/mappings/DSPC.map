@@ -16,8 +16,8 @@
 15 : C2 : 52 53
 bond : 0 1  
 bond : 1 2  
-bond : 2 9  
 bond : 2 3  
+bond : 2 9  
 bond : 3 4  
 bond : 4 5  
 bond : 5 6  
