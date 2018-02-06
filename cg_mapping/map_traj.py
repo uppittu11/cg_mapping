@@ -128,10 +128,10 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
             water_counter +=1
             if water_counter % water_bead_mapping == 0:
                 temp_residue = CG_topology.add_residue("HOH", CG_topology.add_chain())
-                new_bead = CG_bead(beadindex=0, beadtype="P4",
+                new_bead = CG_bead(beadindex=0, beadtype="W",
                         resname='HOH')
                 CG_topology_map.append(new_bead)
-                CG_topology.add_atom("P4", None, temp_residue)
+                CG_topology.add_atom("W", None, temp_residue)
 
 
 
