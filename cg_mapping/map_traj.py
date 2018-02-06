@@ -13,7 +13,7 @@ import cg_mapping
 from cg_mapping.CG_bead import CG_bead
 
 PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
-HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/myforcefield.xml"
+HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/msibi_ff.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
     """ Load a forward mapping
