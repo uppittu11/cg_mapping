@@ -1,0 +1,723 @@
+Log file opened on Fri Apr  6 15:53:52 2018
+Host: master.cl.vanderbilt.edu  pid: 23105  rank ID: 0  number of ranks:  1
+                    :-) GROMACS - gmx mdrun, VERSION 5.1 (-:
+
+                            GROMACS is written by:
+     Emile Apol      Rossen Apostolov  Herman J.C. Berendsen    Par Bjelkmar   
+ Aldert van Buuren   Rudi van Drunen     Anton Feenstra   Sebastian Fritsch 
+  Gerrit Groenhof   Christoph Junghans   Anca Hamuraru    Vincent Hindriksen
+ Dimitrios Karkoulis    Peter Kasson        Jiri Kraus      Carsten Kutzner  
+    Per Larsson      Justin A. Lemkul   Magnus Lundborg   Pieter Meulenhoff 
+   Erik Marklund      Teemu Murtola       Szilard Pall       Sander Pronk   
+   Roland Schulz     Alexey Shvetsov     Michael Shirts     Alfons Sijbers  
+   Peter Tieleman    Teemu Virolainen  Christian Wennberg    Maarten Wolf   
+                           and the project leaders:
+        Mark Abraham, Berk Hess, Erik Lindahl, and David van der Spoel
+
+Copyright (c) 1991-2000, University of Groningen, The Netherlands.
+Copyright (c) 2001-2015, The GROMACS development team at
+Uppsala University, Stockholm University and
+the Royal Institute of Technology, Sweden.
+check out http://www.gromacs.org for more information.
+
+GROMACS is free software; you can redistribute it and/or modify it
+under the terms of the GNU Lesser General Public License
+as published by the Free Software Foundation; either version 2.1
+of the License, or (at your option) any later version.
+
+GROMACS:      gmx mdrun, VERSION 5.1
+Executable:   /raid6/software/gromacs_5.1.0//bin/gmx
+Data prefix:  /raid6/software/gromacs_5.1.0/
+Command line:
+  gmx mdrun -deffnm em
+
+GROMACS version:    VERSION 5.1
+Precision:          single
+Memory model:       64 bit
+MPI library:        thread_mpi
+OpenMP support:     enabled (GMX_OPENMP_MAX_THREADS = 32)
+GPU support:        enabled
+OpenCL support:     disabled
+invsqrt routine:    gmx_software_invsqrt(x)
+SIMD instructions:  AVX2_256
+FFT library:        fftw-3.3.4-sse2-avx
+RDTSCP usage:       enabled
+C++11 compilation:  disabled
+TNG support:        enabled
+Tracing support:    disabled
+Built on:           Fri Aug 14 12:10:17 CDT 2015
+Built by:           microway@master.cl.vanderbilt.edu [CMAKE]
+Build OS/arch:      Linux 3.10.0-229.1.2.el7.x86_64 x86_64
+Build CPU vendor:   GenuineIntel
+Build CPU brand:    Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz
+Build CPU family:   6   Model: 63   Stepping: 2
+Build CPU features: aes apic avx avx2 clfsh cmov cx8 cx16 f16c fma htt lahf_lm mmx msr nonstop_tsc pcid pclmuldq pdcm pdpe1gb popcnt pse rdrnd rdtscp sse2 sse3 sse4.1 sse4.2 ssse3 tdt x2apic
+C compiler:         /usr/bin/cc GNU 4.8.3
+C compiler flags:    -march=core-avx2    -Wextra -Wno-missing-field-initializers -Wno-sign-compare -Wpointer-arith -Wall -Wno-unused -Wunused-value -Wunused-parameter  -O3 -DNDEBUG -funroll-all-loops -fexcess-precision=fast  -Wno-array-bounds 
+C++ compiler:       /usr/bin/c++ GNU 4.8.3
+C++ compiler flags:  -march=core-avx2    -Wextra -Wno-missing-field-initializers -Wpointer-arith -Wall -Wno-unused-function  -O3 -DNDEBUG -funroll-all-loops -fexcess-precision=fast  -Wno-array-bounds 
+Boost version:      1.55.0 (internal)
+CUDA compiler:      /usr/local/cuda/bin/nvcc nvcc: NVIDIA (R) Cuda compiler driver;Copyright (c) 2005-2015 NVIDIA Corporation;Built on Mon_Feb_16_22:59:02_CST_2015;Cuda compilation tools, release 7.0, V7.0.27
+CUDA compiler flags:-gencode;arch=compute_20,code=sm_20;-gencode;arch=compute_30,code=sm_30;-gencode;arch=compute_35,code=sm_35;-gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_50,code=compute_50;-use_fast_math;; ;-march=core-avx2;-Wextra;-Wno-missing-field-initializers;-Wpointer-arith;-Wall;-Wno-unused-function;-O3;-DNDEBUG;-funroll-all-loops;-fexcess-precision=fast;-Wno-array-bounds;
+CUDA driver:        7.0
+CUDA runtime:       7.0
+
+
+Running on 1 node with total 16 cores, 32 logical cores, 1 compatible GPU
+Hardware detected:
+  CPU info:
+    Vendor: GenuineIntel
+    Brand:  Intel(R) Xeon(R) CPU E5-2630 v3 @ 2.40GHz
+    Family:  6  model: 63  stepping:  2
+    CPU features: aes apic avx avx2 clfsh cmov cx8 cx16 f16c fma htt lahf_lm mmx msr nonstop_tsc pcid pclmuldq pdcm pdpe1gb popcnt pse rdrnd rdtscp sse2 sse3 sse4.1 sse4.2 ssse3 tdt x2apic
+    SIMD instructions most likely to fit this hardware: AVX2_256
+    SIMD instructions selected at GROMACS compile time: AVX2_256
+  GPU info:
+    Number of GPUs detected: 1
+    #0: NVIDIA Quadro K620, compute cap.: 5.0, ECC:  no, stat: compatible
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+S. Páll, M. J. Abraham, C. Kutzner, B. Hess, E. Lindahl
+Tackling Exascale Software Challenges in Molecular Dynamics Simulations with
+GROMACS
+In S. Markidis & E. Laure (Eds.), Solving Software Challenges for Exascale 8759 (2015) pp. 3-27
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+S. Pronk, S. Páll, R. Schulz, P. Larsson, P. Bjelkmar, R. Apostolov, M. R.
+Shirts, J. C. Smith, P. M. Kasson, D. van der Spoel, B. Hess, and E. Lindahl
+GROMACS 4.5: a high-throughput and highly parallel open source molecular
+simulation toolkit
+Bioinformatics 29 (2013) pp. 845-54
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+B. Hess and C. Kutzner and D. van der Spoel and E. Lindahl
+GROMACS 4: Algorithms for highly efficient, load-balanced, and scalable
+molecular simulation
+J. Chem. Theory Comput. 4 (2008) pp. 435-447
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+D. van der Spoel, E. Lindahl, B. Hess, G. Groenhof, A. E. Mark and H. J. C.
+Berendsen
+GROMACS: Fast, Flexible and Free
+J. Comp. Chem. 26 (2005) pp. 1701-1719
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+E. Lindahl and B. Hess and D. van der Spoel
+GROMACS 3.0: A package for molecular simulation and trajectory analysis
+J. Mol. Mod. 7 (2001) pp. 306-317
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+H. J. C. Berendsen, D. van der Spoel and R. van Drunen
+GROMACS: A message-passing parallel molecular dynamics implementation
+Comp. Phys. Comm. 91 (1995) pp. 43-56
+-------- -------- --- Thank You --- -------- --------
+
+Input Parameters:
+   integrator                     = steep
+   tinit                          = 0
+   dt                             = 0.001
+   nsteps                         = 50000
+   init-step                      = 0
+   simulation-part                = 1
+   comm-mode                      = Linear
+   nstcomm                        = 100
+   bd-fric                        = 0
+   ld-seed                        = 4238818192
+   emtol                          = 1000
+   emstep                         = 0.01
+   niter                          = 20
+   fcstep                         = 0
+   nstcgsteep                     = 1000
+   nbfgscorr                      = 10
+   rtpi                           = 0.05
+   nstxout                        = 0
+   nstvout                        = 0
+   nstfout                        = 0
+   nstlog                         = 1000
+   nstcalcenergy                  = 100
+   nstenergy                      = 1000
+   nstxout-compressed             = 0
+   compressed-x-precision         = 1000
+   cutoff-scheme                  = Verlet
+   nstlist                        = 1
+   ns-type                        = Grid
+   pbc                            = xyz
+   periodic-molecules             = FALSE
+   verlet-buffer-tolerance        = 0.005
+   rlist                          = 1
+   rlistlong                      = 1
+   nstcalclr                      = 1
+   coulombtype                    = Cut-off
+   coulomb-modifier               = Potential-shift
+   rcoulomb-switch                = 0
+   rcoulomb                       = 1
+   epsilon-r                      = 1
+   epsilon-rf                     = inf
+   vdw-type                       = Cut-off
+   vdw-modifier                   = Potential-shift
+   rvdw-switch                    = 0
+   rvdw                           = 1
+   DispCorr                       = No
+   table-extension                = 1
+   fourierspacing                 = 0.12
+   fourier-nx                     = 0
+   fourier-ny                     = 0
+   fourier-nz                     = 0
+   pme-order                      = 4
+   ewald-rtol                     = 1e-05
+   ewald-rtol-lj                  = 0.001
+   lj-pme-comb-rule               = Geometric
+   ewald-geometry                 = 0
+   epsilon-surface                = 0
+   implicit-solvent               = No
+   gb-algorithm                   = Still
+   nstgbradii                     = 1
+   rgbradii                       = 1
+   gb-epsilon-solvent             = 80
+   gb-saltconc                    = 0
+   gb-obc-alpha                   = 1
+   gb-obc-beta                    = 0.8
+   gb-obc-gamma                   = 4.85
+   gb-dielectric-offset           = 0.009
+   sa-algorithm                   = Ace-approximation
+   sa-surface-tension             = 2.05016
+   tcoupl                         = No
+   nsttcouple                     = -1
+   nh-chain-length                = 0
+   print-nose-hoover-chain-variables = FALSE
+   pcoupl                         = No
+   pcoupltype                     = Isotropic
+   nstpcouple                     = -1
+   tau-p                          = 1
+   compressibility (3x3):
+      compressibility[    0]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      compressibility[    1]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      compressibility[    2]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+   ref-p (3x3):
+      ref-p[    0]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      ref-p[    1]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      ref-p[    2]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+   refcoord-scaling               = No
+   posres-com (3):
+      posres-com[0]= 0.00000e+00
+      posres-com[1]= 0.00000e+00
+      posres-com[2]= 0.00000e+00
+   posres-comB (3):
+      posres-comB[0]= 0.00000e+00
+      posres-comB[1]= 0.00000e+00
+      posres-comB[2]= 0.00000e+00
+   QMMM                           = FALSE
+   QMconstraints                  = 0
+   QMMMscheme                     = 0
+   MMChargeScaleFactor            = 1
+qm-opts:
+   ngQM                           = 0
+   constraint-algorithm           = Lincs
+   continuation                   = FALSE
+   Shake-SOR                      = FALSE
+   shake-tol                      = 0.0001
+   lincs-order                    = 4
+   lincs-iter                     = 1
+   lincs-warnangle                = 30
+   nwall                          = 0
+   wall-type                      = 9-3
+   wall-r-linpot                  = -1
+   wall-atomtype[0]               = -1
+   wall-atomtype[1]               = -1
+   wall-density[0]                = 0
+   wall-density[1]                = 0
+   wall-ewald-zfac                = 3
+   pull                           = FALSE
+   rotation                       = FALSE
+   interactiveMD                  = FALSE
+   disre                          = No
+   disre-weighting                = Conservative
+   disre-mixed                    = FALSE
+   dr-fc                          = 1000
+   dr-tau                         = 0
+   nstdisreout                    = 100
+   orire-fc                       = 0
+   orire-tau                      = 0
+   nstorireout                    = 100
+   free-energy                    = no
+   cos-acceleration               = 0
+   deform (3x3):
+      deform[    0]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      deform[    1]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      deform[    2]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+   simulated-tempering            = FALSE
+   E-x:
+      n = 0
+   E-xt:
+      n = 0
+   E-y:
+      n = 0
+   E-yt:
+      n = 0
+   E-z:
+      n = 0
+   E-zt:
+      n = 0
+   swapcoords                     = no
+   adress                         = FALSE
+   userint1                       = 0
+   userint2                       = 0
+   userint3                       = 0
+   userint4                       = 0
+   userreal1                      = 0
+   userreal2                      = 0
+   userreal3                      = 0
+   userreal4                      = 0
+grpopts:
+   nrdf:        8997
+   ref-t:           0
+   tau-t:           0
+annealing:          No
+annealing-npoints:           0
+   acc:	           0           0           0
+   nfreeze:           N           N           N
+   energygrp-flags[  0]: 0
+
+Using 1 MPI thread
+Using 32 OpenMP threads 
+
+1 compatible GPU is present, with ID 0
+1 GPU auto-selected for this run.
+Mapping of GPU ID to the 1 PP rank in this node: 0
+
+Cut-off's:   NS: 1   Coulomb: 1   LJ: 1
+System total charge: 0.000
+Potential shift: LJ r^-12: -1.000e+00 r^-6: -1.000e+00, Coulomb -1e+00
+
+Using GPU 8x8 non-bonded kernels
+
+Removing pbc first time
+Pinning threads with an auto-selected logical core stride of 1
+Initiating Steepest Descents
+Started Steepest Descents on rank 0 Fri Apr  6 15:53:52 2018
+
+Steepest Descents:
+   Tolerance (Fmax)   =  1.00000e+03
+   Number of steps    =        50000
+           Step           Time         Lambda
+              0        0.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    2.75966e+03    5.44929e+03    3.48383e+05    0.00000e+00    3.56592e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              1        1.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.46541e+04    1.22304e+04    1.25478e+05    0.00000e+00    1.82362e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              2        2.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    7.07174e+03    5.15974e+04    5.53680e+04    0.00000e+00    1.14037e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              3        3.00000        0.00000
+
+           Step           Time         Lambda
+              4        4.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    1.37181e+04    5.88403e+04    3.90147e+04    0.00000e+00    1.11573e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              5        5.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.32342e+03    6.20859e+04    4.16233e+04    0.00000e+00    1.09033e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              6        6.00000        0.00000
+
+           Step           Time         Lambda
+              7        7.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    9.09412e+03    6.10887e+04    3.65854e+04    0.00000e+00    1.06768e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              8        8.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.09115e+03    6.21505e+04    3.81104e+04    0.00000e+00    1.05352e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+              9        9.00000        0.00000
+
+           Step           Time         Lambda
+             10       10.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    7.19919e+03    6.10153e+04    3.53197e+04    0.00000e+00    1.03534e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             11       11.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.05380e+03    6.09665e+04    3.60984e+04    0.00000e+00    1.02119e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             12       12.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    9.40330e+03    5.90834e+04    3.31246e+04    0.00000e+00    1.01611e+05
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             13       13.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.10824e+03    5.90526e+04    3.47154e+04    0.00000e+00    9.88762e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             14       14.00000        0.00000
+
+           Step           Time         Lambda
+             15       15.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    6.89862e+03    5.75921e+04    3.27907e+04    0.00000e+00    9.72814e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             16       16.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.99055e+03    5.69531e+04    3.34732e+04    0.00000e+00    9.54168e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             17       17.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    9.21669e+03    5.46070e+04    3.09923e+04    0.00000e+00    9.48159e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             18       18.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.98530e+03    5.40270e+04    3.20320e+04    0.00000e+00    9.10444e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             19       19.00000        0.00000
+
+           Step           Time         Lambda
+             20       20.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    6.61202e+03    5.22811e+04    3.02627e+04    0.00000e+00    8.91558e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             21       21.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.70907e+03    5.12745e+04    3.06121e+04    0.00000e+00    8.65957e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             22       22.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    9.27542e+03    4.82579e+04    2.80310e+04    0.00000e+00    8.55643e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             23       23.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.55106e+03    4.72519e+04    2.86120e+04    0.00000e+00    8.04150e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             24       24.00000        0.00000
+
+           Step           Time         Lambda
+             25       25.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    6.34633e+03    4.49285e+04    2.66795e+04    0.00000e+00    7.79543e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             26       26.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.13821e+03    4.36134e+04    2.67323e+04    0.00000e+00    7.44840e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             27       27.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    9.49622e+03    3.95219e+04    2.36752e+04    0.00000e+00    7.26933e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             28       28.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    3.80931e+03    3.82082e+04    2.39031e+04    0.00000e+00    6.59206e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             29       29.00000        0.00000
+
+           Step           Time         Lambda
+             30       30.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.83982e+03    3.52120e+04    2.16718e+04    0.00000e+00    6.27237e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             31       31.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    3.32886e+03    3.36864e+04    2.14690e+04    0.00000e+00    5.84843e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             32       32.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    1.00951e+04    2.86582e+04    1.78412e+04    0.00000e+00    5.65944e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             33       33.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    2.68713e+03    2.73469e+04    1.78456e+04    0.00000e+00    4.78797e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             34       34.00000        0.00000
+
+           Step           Time         Lambda
+             35       35.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    5.50167e+03    2.32867e+04    1.49663e+04    0.00000e+00    4.37546e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             36       36.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    2.15639e+03    2.19976e+04    1.46726e+04    0.00000e+00    3.88266e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             37       37.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    8.96686e+03    1.61207e+04    1.03498e+04    0.00000e+00    3.54374e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             38       38.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    1.62625e+03    1.50740e+04    1.01935e+04    0.00000e+00    2.68937e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             39       39.00000        0.00000
+
+           Step           Time         Lambda
+             40       40.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    4.68993e+03    1.19651e+04    7.57098e+03    0.00000e+00    2.42260e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             41       41.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    1.20455e+03    1.11287e+04    7.29207e+03    0.00000e+00    1.96254e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             42       42.00000        0.00000
+
+           Step           Time         Lambda
+             43       43.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    2.54142e+03    8.94732e+03    5.28361e+03    0.00000e+00    1.67724e+04
+ Pressure (bar)
+    0.00000e+00
+
+           Step           Time         Lambda
+             44       44.00000        0.00000
+
+   Energies (kJ/mol)
+           Bond          Angle        LJ (SR)   Coulomb (SR)      Potential
+    8.86043e+02    8.25686e+03    4.91632e+03    0.00000e+00    1.40592e+04
+ Pressure (bar)
+    0.00000e+00
+
+
+Steepest Descents converged to Fmax < 1000 in 45 steps
+Potential Energy  =  1.4059217e+04
+Maximum force     =  9.4964856e+02 on atom 2760
+Norm of force     =  7.1816174e+02
+
+	M E G A - F L O P S   A C C O U N T I N G
+
+ NB=Group-cutoff nonbonded kernels    NxN=N-by-N cluster Verlet kernels
+ RF=Reaction-Field  VdW=Van der Waals  QSTab=quadratic-spline table
+ W3=SPC/TIP3p  W4=TIP4p (single or pairs)
+ V&F=Potential and force  V=Potential only  F=Force only
+
+ Computing:                               M-Number         M-Flops  % Flops
+-----------------------------------------------------------------------------
+ Pair Search distance check               7.753456          69.781     4.2
+ NxN RF Elec. + LJ [V&F]                 29.130944        1573.071    94.8
+ Shift-X                                  0.135000           0.810     0.0
+ Bonds                                    0.090000           5.310     0.3
+ Angles                                   0.045000           7.560     0.5
+ Virial                                   0.137025           2.466     0.1
+-----------------------------------------------------------------------------
+ Total                                                    1658.999   100.0
+-----------------------------------------------------------------------------
+
+
+     R E A L   C Y C L E   A N D   T I M E   A C C O U N T I N G
+
+On 1 MPI rank, each using 32 OpenMP threads
+
+ Computing:          Num   Num      Call    Wall time         Giga-Cycles
+                     Ranks Threads  Count      (s)         total sum    %
+-----------------------------------------------------------------------------
+ Neighbor search        1   32         45       0.036          5.580  32.0
+ Launch GPU ops.        1   32         45       0.003          0.517   3.0
+ Force                  1   32         45       0.003          0.519   3.0
+ Wait GPU local         1   32         45       0.003          0.423   2.4
+ NB X/F buffer ops.     1   32         45       0.000          0.056   0.3
+ Rest                                           0.068         10.357  59.3
+-----------------------------------------------------------------------------
+ Total                                          0.114         17.452 100.0
+-----------------------------------------------------------------------------
+
+ GPU timings
+-----------------------------------------------------------------------------
+ Computing:                         Count  Wall t (s)      ms/step       %
+-----------------------------------------------------------------------------
+ Pair list H2D                         45       0.003        0.060    17.3
+ X / q H2D                             45       0.001        0.014     3.9
+ Nonbonded F+ene+prune k.              45       0.012        0.257    73.5
+ F D2H                                 45       0.001        0.019     5.3
+-----------------------------------------------------------------------------
+ Total                                          0.016        0.349   100.0
+-----------------------------------------------------------------------------
+
+Force evaluation time GPU/CPU: 0.349 ms/0.075 ms = 4.635
+
+NOTE: 32 % of the run time was spent in pair search,
+      you might want to increase nstlist (this has no effect on accuracy)
+
+
+               Core t (s)   Wall t (s)        (%)
+       Time:        2.622        0.114     2301.7
+               (steps/hour)
+Performance:      1422372.4
+Finished mdrun on rank 0 Fri Apr  6 15:53:52 2018

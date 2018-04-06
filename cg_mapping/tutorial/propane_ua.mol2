@@ -1,0 +1,14 @@
+@<TRIPOS>MOLECULE
+*****
+ 3 2 0 0 0
+SMALL
+GASTEIGER
+
+@<TRIPOS>ATOM
+      1 CH3        -4.8968    0.9659    0.0080 C.3     1  UNL1       -0.0655
+      2 CH2        -3.6147    0.1681    0.1762 C.3     1  UNL1       -0.0588
+      3 CH3        -2.3859    1.0136   -0.1131 C.3     1  UNL1       -0.0655
+@<TRIPOS>BOND
+     1     1     2    1
+     2     2     3    1
+     

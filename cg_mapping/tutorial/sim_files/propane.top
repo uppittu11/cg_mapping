@@ -1,0 +1,11 @@
+;; propane topology for tutorial
+
+#include "prop.itp"
+
+[ System ]
+; name
+propane in a box
+
+[ Molecules ]
+; Compound
+prop 1000
