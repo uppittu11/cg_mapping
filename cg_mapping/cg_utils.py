@@ -153,8 +153,8 @@ class State(object):
             w = params[1]
             A = params[2]
 
-            # Extracts sprint constant
-            force_constant = self._k_b * self._T/w**2
+            # Extract spring constant
+            force_constant = 4 * self._k_b * self._T/w**2
             #bonded_parameters={'force_constant': force_constant, 'x0': x0}
         # Fit gaussian energies
         else:
@@ -205,7 +205,6 @@ class State(object):
             #print("No {}-{} bonds detected".format(atomtype_i, atomtype_j))
             return None
 
-        print(bonded_pairs[0:10])
         # Compute distance between bonded pairs
         bond_distances = np.asarray(mdtraj.compute_distances(traj,bonded_pairs))
     
@@ -347,7 +346,6 @@ class State(object):
     
         if len(all_triplets) == 0:
             return None
-        print(all_triplets[0:10])
     
     
         # Compute angle between triplets
