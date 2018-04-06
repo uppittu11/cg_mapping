@@ -53,6 +53,7 @@ system_state = cg_utils.State(k_b=8.314e-3, T=305)
 # 2. Perform a Boltzmann inversion to calculate the potential energy of these bonds, $V(x) = -k_b * T * ln(P(x)) = \frac{1}{2}K_b(x-x_0)^{2}$
 # 3. Fit a gaussian function to the probability distribution centered around the energetic minimum, $P(x) = \frac{A}{(w\sqrt{\pi /2})} * e^{\frac{-2(x-x_0)^{2}}{w^{2}}}$
 # 4. From the fitted parameters, the force constant $K_b = \frac{4*k_b * T}{w^{2}}$ and the reference distance is $x_0$
+# 5. Bond distributions and energies are plotted for visualization and verification
 
 # In[4]:
 
@@ -74,7 +75,9 @@ all_bonding_parameters.to_csv('bond_parameters.dat', sep='\t', index=False)
 # 1. Construct a probability distribution of angles $P(\theta)$
 # 2. Perform a Boltzmann inversion to calculate the potential energy of these angles, noting the additional weighting factor, $V(\theta) = -k_b * T * ln(p(\theta)) = \frac{1}{2} K_\theta*(\theta-\theta_0)^{2}$, where $p(\theta) = \frac{P(\theta)}{\sin({\theta})}$
 # 3. Fit a gaussian function to the probability distribution centered around the energetic minimum, $P(\theta) = \frac{A}{w\sqrt{\pi /2}} * e^{\frac{-2 * (\theta-\theta_0)^{2}}{w^{2}}}$
+# Note: due to the weighting factor, the gaussian distribution is somewhat skewed, so the distribution may be mirrored to provide a better energy well for fitting (see code `compute_angle_parameters()` in `cg_utils.py` for more detail)
 # 4. From the fitted parameters, the force constant $K_\theta = \frac{4*k_b * T}{w^{2}}$ and the reference angle is $\theta_0$
+# 5. Angle distributions and energies are plotted for visualization and verification
 
 # In[5]:
 
