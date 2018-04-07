@@ -1,7 +1,7 @@
 title                       = DSPC NPT Production Run
 ; Run parameters
 integrator                  = md
-nsteps                      = 500000     ; 2fs/step * 5e5 steps = 1e6 fs = 1 ns
+nsteps                      = 2500000     ; 2fs/step * 2.5e6 steps = 5e6 fs = 5 ns
 dt                          = 0.002
 
 ; Output control
