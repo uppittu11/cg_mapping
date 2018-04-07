@@ -405,24 +405,7 @@ class State(object):
         while not converged:
             try:
                 #bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
-                bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
-                if bonded_parameters['force_constant'] > 0.01:
-                    converged = True
-                else:
-                    converged = False
-                    i += 1
-            except RuntimeError:
-
-                try:
-                    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i], energy_fit=True)
-                    if bonded_parameters['force_constant'] > 0.01:
-                        converged = True
-                    else: 
-                        converged = False
-                        i += 1
-                except RuntimeError:
-                    i += 1
-                    if min_index + i >= 50 or min_index -i <=0:
+                if min_index + i >= 50 or min_index -i <=0:
                         # Before fitting, may need to reflect energies about a particular angle
                         mirror_angles = np.zeros_like(all_angles)
                         mirror_energies = np.zeros_like(all_energies)
@@ -435,14 +418,51 @@ class State(object):
                         all_angles.extend(mirror_angles)
                         all_energies.extend(mirror_energies)
                         all_probabilities.extend(mirror_probabilities)
+                        bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
+                        converged=True
 
-                        #bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
-                        try:
-                            bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
-                            converged=True
-                        except RuntimeError:
-                            bonded_parameters = self.fit_to_gaussian(all_angles, all_energies, energy_fit=True)
+
+                else:
+                    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
+                    if bonded_parameters['force_constant'] > 0.01:
                         converged = True
+                    else:
+                        converged = False
+                        i += 1
+            except RuntimeError:
+                i+=1
+                converged = False
+
+                #try:
+                #    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i], energy_fit=True)
+                #    if bonded_parameters['force_constant'] > 0.01:
+                #        converged = True
+                #    else: 
+                #        converged = False
+                #        i += 1
+                #except RuntimeError:
+                #    i += 1
+                #    if min_index + i >= 50 or min_index -i <=0:
+                #        # Before fitting, may need to reflect energies about a particular angle
+                #        mirror_angles = np.zeros_like(all_angles)
+                #        mirror_energies = np.zeros_like(all_energies)
+                #        mirror_probabilities = np.zeros_like(all_probabilities)
+                #        for i, val in enumerate(all_angles):
+                #            mirror_energies[i] = all_energies[-i-1]
+                #            mirror_probabilities[i] = all_energies[-i-1]
+                #            mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
+                #    
+                #        all_angles.extend(mirror_angles)
+                #        all_energies.extend(mirror_energies)
+                #        all_probabilities.extend(mirror_probabilities)
+
+                #        #bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+                #        try:
+                #            bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
+                #            converged=True
+                #        except RuntimeError:
+                #            bonded_parameters = self.fit_to_gaussian(all_angles, all_energies, energy_fit=True)
+                #        converged = True
 
         predicted_energies = self.harmonic_energy(all_angles, **bonded_parameters)
         if plot:
