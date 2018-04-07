@@ -6,6 +6,9 @@ import itertools
 import matplotlib
 matplotlib.use('Agg')
 import pdb
+import networkx as nx
+from networkx import NetworkXNoPath
+
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from collections import Counter
@@ -20,11 +23,20 @@ class State(object):
         Boltzmann constant
     T : float
         Temperature
+    traj : MDTraj Trajectory
+
         """
 
-    def __init__(self, k_b=8.314e-3, T=305):
+    def __init__(self, k_b=8.314e-3, T=305, traj=None):
         self._k_b = k_b
         self._T = T
+        self._traj = traj
+        self._bondgraph = nx.Graph()
+        self._bondgraph.add_nodes_from([a.index for a in traj.topology.atoms])
+        bonds = [b for b in traj.topology.bonds]
+        bonds_by_index = [(b[0].index, b[1].index) for b in bonds]
+        self._bondgraph.add_edges_from(bonds_by_index)
+
     
     @property
     def k_b(self):
@@ -34,6 +46,14 @@ class State(object):
     def T(self):
         return self._T
 
+    @property
+    def traj(self):
+        return self._traj
+
+    @property
+    def bondgraph(self):
+        return self._bondgraph
+
     @k_b.setter
     def k_b(self, k_b):
         self._k_b = k_b
@@ -42,8 +62,18 @@ class State(object):
     def T(self, T):
         self._T = T
 
+    @traj.setter
+    def traj(self, traj):
+        self._T = traj
+        self._bondgraph = nx.Graph()
+        self._bondgraph.add_nodes_from([a.index for a in traj.topology.atoms])
+        bonds = [b for b in traj.topology.bonds]
+        bonds_by_index = [(b[0].index, b[1].index) for b in bonds]
+        self._bondgraph.add_edges_from(bonds_by_index)
+
+
     def __str__(self):
-        return("k_B = {} \nT = {}".format(self.k_b, self.T))
+        return("k_B = {} \nT = {}\ntraj = {}".format(self.k_b, self.T, self.traj))
     
 
     def gaussian(self, x,  x0, w, A):
@@ -168,7 +198,7 @@ class State(object):
         bonded_parameters={'force_constant': force_constant, 'x0': x0}
         return bonded_parameters
     
-    def compute_bond_parameters(self, traj, atomtype_i, atomtype_j, plot=False):
+    def compute_bond_parameters(self, atomtype_i, atomtype_j, plot=False):
         """
         Calculate bonded parameters from a trajectory
         Compute the probability distribution of bond lengths
@@ -176,7 +206,6 @@ class State(object):
         
         Parameters
         ---------
-        traj : mdtraj Trajectory
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -191,7 +220,7 @@ class State(object):
     
         """
     
-        topol = traj.topology
+        topol = self.traj.topology
         target_pair = (atomtype_i, atomtype_j)
         bonded_pairs = []
         if len([(i,j) for i,j in topol.bonds]) == 0:
@@ -206,7 +235,7 @@ class State(object):
             return None
 
         # Compute distance between bonded pairs
-        bond_distances = np.asarray(mdtraj.compute_distances(traj,bonded_pairs))
+        bond_distances = np.asarray(mdtraj.compute_distances(self.traj, bonded_pairs))
     
         fig,ax =  plt.subplots(1,1)
         # 51 bins, 50 probabilities
@@ -275,7 +304,7 @@ class State(object):
     
     
     
-    def compute_angle_parameters(self, traj, G, atomtype_i, atomtype_j, atomtype_k, plot=False):
+    def compute_angle_parameters(self, atomtype_i, atomtype_j, atomtype_k, plot=False):
         """
         Calculate angle parameters from a trajectory
         Compute the probability distribution of angles
@@ -283,9 +312,6 @@ class State(object):
         
         Parameters
         ---------
-        traj : mdtraj Trajectory
-        G : NetworkX Graph
-            Bonds are edges connecting to atom indices represented by nodes
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -308,17 +334,17 @@ class State(object):
     
         all_triplets = []
         #participating_bonds = []
-        if len([(i,j) for i,j in topol.bonds]) == 0:
+        if len([(i,j) for i,j in self.traj.topology.bonds]) == 0:
             sys.exit("No bonds detected, check your input files")
         # Find all the central atoms 
-        central_atoms = [a.index for a in traj.topology.atoms if 
+        central_atoms = [a.index for a in self.traj.topology.atoms if 
                 atomtype_j in a.name]
         # For each central atom, try to build an i-j-k triplet
         # by finding neighbors
         for atom_j in central_atoms:
-            for atom_i, atom_k in itertools.product(G.neighbors(atom_j),repeat=2):
-                if atomtype_i in traj.topology.atom(atom_i).name and \
-                        atomtype_k in traj.topology.atom(atom_k).name and \
+            for atom_i, atom_k in itertools.product(self.bondgraph.neighbors(atom_j),repeat=2):
+                if atomtype_i in self.traj.topology.atom(atom_i).name and \
+                        atomtype_k in self.traj.topology.atom(atom_k).name and \
                         atom_i != atom_k:
                             all_triplets.append([atom_i, atom_j, atom_k])
             
@@ -327,7 +353,7 @@ class State(object):
     
     
         # Compute angle between triplets
-        all_angles_rad = np.asarray(mdtraj.compute_angles(traj, all_triplets))
+        all_angles_rad = np.asarray(mdtraj.compute_angles(self.traj, all_triplets))
     
     
         fig,ax =  plt.subplots(1,1)
@@ -438,14 +464,13 @@ class State(object):
     
             
         
-    def compute_rdf(self, traj, atomtype_i, atomtype_j, output, 
+    def compute_rdf(self, atomtype_i, atomtype_j, output, 
             bin_width=0.01, exclude_up_to=3):
         """
         Compute RDF between pair of atoms, save to text
     
         Parameters
         ---------
-        traj : mdtraj Trajectory
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -470,11 +495,11 @@ class State(object):
         """
 
 
-        pairs = traj.topology.select_pairs("name '{0}'".format(atomtype_i),
+        pairs = self.traj.topology.select_pairs("name '{0}'".format(atomtype_i),
                                  "name '{0}'".format(atomtype_j))
         if exclude_up_to is not None:
-            to_delete = find_1_n_exclusions(traj.topology, pairs, exclude_up_to)
+            to_delete = find_1_n_exclusions(self.traj.topology, pairs, exclude_up_to)
             pairs = np.delete(pairs, to_delete, axis=0)
-        (first, second) = mdtraj.compute_rdf(traj, pairs, [0,2], bin_width=bin_width)
+        (first, second) = mdtraj.compute_rdf(self.traj, pairs, [0,2], bin_width=bin_width)
         np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))
     
