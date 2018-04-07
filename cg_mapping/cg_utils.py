@@ -275,7 +275,7 @@ class State(object):
     
     
     
-    def compute_angle_parameters(self, G, traj, atomtype_i, atomtype_j, atomtype_k, plot=False):
+    def compute_angle_parameters(self, traj, G, atomtype_i, atomtype_j, atomtype_k, plot=False):
         """
         Calculate angle parameters from a trajectory
         Compute the probability distribution of angles
@@ -306,46 +306,22 @@ class State(object):
     
         """
     
-        topol = traj.topology
-        #target_triplet = set((atomtype_i, atomtype_j, atomtype_k))
-        target_triplet = [atomtype_i, atomtype_j, atomtype_k]
-        target_counter = Counter(target_triplet)
         all_triplets = []
-        participating_bonds = []
+        #participating_bonds = []
         if len([(i,j) for i,j in topol.bonds]) == 0:
             sys.exit("No bonds detected, check your input files")
-    
-        # Iterate through topology bonds
-        # Find all participating bonds that could fit in the triplet
-        # If (1,2) and (2,4) then (1,2,4) is a triplet
-        for (i, j) in topol.bonds:
-            # If i.name and j.name aren't in the target_triplet, ignore it
-            pair = Counter([i.name,j.name])
-            diff = target_counter - pair
-            if len([i for i in diff.elements()]) == 1 :
-                participating_bonds.append([i,j])
-
-
-
-        # Iterate through all combinations of participating bonds
-        # If they share the same atom (atomtype_j), then this is a hit
-        # The set of the 2 pairs must also have length 3 (one atom in common)
-        # The names must all match up to the target triplet names
-        for pair1, pair2 in itertools.combinations(participating_bonds,2):
-            triplet_set = set((*pair1, *pair2))
-            temp_triplet = [atomtype_i, atomtype_j, atomtype_k]
-            all_pair_names = [i.name for i in pair1] + [j.name for j in pair2]
-            for i in all_pair_names:
-                try:
-                    temp_triplet.remove(i)
-                except ValueError:
-                    pass
-            sym_diff = sorted([a.index for a in set((pair1)).symmetric_difference((pair2))])
-            intersection = [a for a in set((pair1)).intersection(set((pair2)))]
-            if len(triplet_set) == 3 and len(intersection) == 1 and atomtype_j in intersection[0].name and len(temp_triplet)==0:
-                all_triplets.append([sym_diff[0], intersection[0].index,
-                    sym_diff[1]])
-    
+        # Find all the central atoms 
+        central_atoms = [a.index for a in traj.topology.atoms if 
+                atomtype_j in a.name]
+        # For each central atom, try to build an i-j-k triplet
+        # by finding neighbors
+        for atom_j in central_atoms:
+            for atom_i, atom_k in itertools.product(G.neighbors(atom_j),repeat=2):
+                if atomtype_i in traj.topology.atom(atom_i).name and \
+                        atomtype_k in traj.topology.atom(atom_k).name and \
+                        atom_i != atom_k:
+                            all_triplets.append([atom_i, atom_j, atom_k])
+            
         if len(all_triplets) == 0:
             return None
     
