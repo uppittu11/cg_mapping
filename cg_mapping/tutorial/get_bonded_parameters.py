@@ -52,7 +52,7 @@ all_angle_parameters = pd.DataFrame(columns=['#angle','force_constant', 'x0'])
 for x,z in itertools.combinations_with_replacement(beadtypes, 2):
         for y in beadtypes: 
             print("{}-{}-{}: ".format(x,y,z))
-            angle_parameters = system_state.compute_angle_parameters( x, y, z)
+            angle_parameters = system_state.compute_angle_parameters( x, y, z, plot=True)
             print(angle_parameters)
             if angle_parameters:
                 all_angle_parameters.loc[len(all_angle_parameters)] = \
