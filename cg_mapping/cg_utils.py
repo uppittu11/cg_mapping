@@ -6,6 +6,9 @@ import itertools
 import matplotlib
 matplotlib.use('Agg')
 import pdb
+import networkx as nx
+from networkx import NetworkXNoPath
+
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from collections import Counter
@@ -20,11 +23,20 @@ class State(object):
         Boltzmann constant
     T : float
         Temperature
+    traj : MDTraj Trajectory
+
         """
 
-    def __init__(self, k_b=8.314e-3, T=305):
+    def __init__(self, k_b=8.314e-3, T=305, traj=None):
         self._k_b = k_b
         self._T = T
+        self._traj = traj
+        self._bondgraph = nx.Graph()
+        self._bondgraph.add_nodes_from([a.index for a in traj.topology.atoms])
+        bonds = [b for b in traj.topology.bonds]
+        bonds_by_index = [(b[0].index, b[1].index) for b in bonds]
+        self._bondgraph.add_edges_from(bonds_by_index)
+
     
     @property
     def k_b(self):
@@ -34,6 +46,14 @@ class State(object):
     def T(self):
         return self._T
 
+    @property
+    def traj(self):
+        return self._traj
+
+    @property
+    def bondgraph(self):
+        return self._bondgraph
+
     @k_b.setter
     def k_b(self, k_b):
         self._k_b = k_b
@@ -42,8 +62,18 @@ class State(object):
     def T(self, T):
         self._T = T
 
+    @traj.setter
+    def traj(self, traj):
+        self._T = traj
+        self._bondgraph = nx.Graph()
+        self._bondgraph.add_nodes_from([a.index for a in traj.topology.atoms])
+        bonds = [b for b in traj.topology.bonds]
+        bonds_by_index = [(b[0].index, b[1].index) for b in bonds]
+        self._bondgraph.add_edges_from(bonds_by_index)
+
+
     def __str__(self):
-        return("k_B = {} \nT = {}".format(self.k_b, self.T))
+        return("k_B = {} \nT = {}\ntraj = {}".format(self.k_b, self.T, self.traj))
     
 
     def gaussian(self, x,  x0, w, A):
@@ -168,7 +198,7 @@ class State(object):
         bonded_parameters={'force_constant': force_constant, 'x0': x0}
         return bonded_parameters
     
-    def compute_bond_parameters(self, traj, atomtype_i, atomtype_j, plot=False):
+    def compute_bond_parameters(self, atomtype_i, atomtype_j, plot=False):
         """
         Calculate bonded parameters from a trajectory
         Compute the probability distribution of bond lengths
@@ -176,7 +206,6 @@ class State(object):
         
         Parameters
         ---------
-        traj : mdtraj Trajectory
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -191,7 +220,7 @@ class State(object):
     
         """
     
-        topol = traj.topology
+        topol = self.traj.topology
         target_pair = (atomtype_i, atomtype_j)
         bonded_pairs = []
         if len([(i,j) for i,j in topol.bonds]) == 0:
@@ -206,7 +235,7 @@ class State(object):
             return None
 
         # Compute distance between bonded pairs
-        bond_distances = np.asarray(mdtraj.compute_distances(traj,bonded_pairs))
+        bond_distances = np.asarray(mdtraj.compute_distances(self.traj, bonded_pairs))
     
         fig,ax =  plt.subplots(1,1)
         # 51 bins, 50 probabilities
@@ -275,7 +304,7 @@ class State(object):
     
     
     
-    def compute_angle_parameters(self, traj, atomtype_i, atomtype_j, atomtype_k, plot=False):
+    def compute_angle_parameters(self, atomtype_i, atomtype_j, atomtype_k, plot=False):
         """
         Calculate angle parameters from a trajectory
         Compute the probability distribution of angles
@@ -283,7 +312,6 @@ class State(object):
         
         Parameters
         ---------
-        traj : mdtraj Trajectory
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -304,52 +332,28 @@ class State(object):
     
         """
     
-        topol = traj.topology
-        #target_triplet = set((atomtype_i, atomtype_j, atomtype_k))
-        target_triplet = [atomtype_i, atomtype_j, atomtype_k]
-        target_counter = Counter(target_triplet)
         all_triplets = []
-        participating_bonds = []
-        if len([(i,j) for i,j in topol.bonds]) == 0:
+        #participating_bonds = []
+        if len([(i,j) for i,j in self.traj.topology.bonds]) == 0:
             sys.exit("No bonds detected, check your input files")
-    
-        # Iterate through topology bonds
-        # Find all participating bonds that could fit in the triplet
-        # If (1,2) and (2,4) then (1,2,4) is a triplet
-        for (i, j) in topol.bonds:
-            # If i.name and j.name aren't in the target_triplet, ignore it
-            pair = Counter([i.name,j.name])
-            diff = target_counter - pair
-            if len([i for i in diff.elements()]) == 1 :
-                participating_bonds.append([i,j])
-
-
-
-        # Iterate through all combinations of participating bonds
-        # If they share the same atom (atomtype_j), then this is a hit
-        # The set of the 2 pairs must also have length 3 (one atom in common)
-        # The names must all match up to the target triplet names
-        for pair1, pair2 in itertools.combinations(participating_bonds,2):
-            triplet_set = set((*pair1, *pair2))
-            temp_triplet = [atomtype_i, atomtype_j, atomtype_k]
-            all_pair_names = [i.name for i in pair1] + [j.name for j in pair2]
-            for i in all_pair_names:
-                try:
-                    temp_triplet.remove(i)
-                except ValueError:
-                    pass
-            sym_diff = sorted([a.index for a in set((pair1)).symmetric_difference((pair2))])
-            intersection = [a for a in set((pair1)).intersection(set((pair2)))]
-            if len(triplet_set) == 3 and len(intersection) == 1 and atomtype_j in intersection[0].name and len(temp_triplet)==0:
-                all_triplets.append([sym_diff[0], intersection[0].index,
-                    sym_diff[1]])
-    
+        # Find all the central atoms 
+        central_atoms = [a.index for a in self.traj.topology.atoms if 
+                atomtype_j in a.name]
+        # For each central atom, try to build an i-j-k triplet
+        # by finding neighbors
+        for atom_j in central_atoms:
+            for atom_i, atom_k in itertools.product(self.bondgraph.neighbors(atom_j),repeat=2):
+                if atomtype_i in self.traj.topology.atom(atom_i).name and \
+                        atomtype_k in self.traj.topology.atom(atom_k).name and \
+                        atom_i != atom_k:
+                            all_triplets.append([atom_i, atom_j, atom_k])
+            
         if len(all_triplets) == 0:
             return None
     
     
         # Compute angle between triplets
-        all_angles_rad = np.asarray(mdtraj.compute_angles(traj, all_triplets))
+        all_angles_rad = np.asarray(mdtraj.compute_angles(self.traj, all_triplets))
     
     
         fig,ax =  plt.subplots(1,1)
@@ -401,24 +405,7 @@ class State(object):
         while not converged:
             try:
                 #bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i])
-                bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
-                if bonded_parameters['force_constant'] > 0.01:
-                    converged = True
-                else:
-                    converged = False
-                    i += 1
-            except RuntimeError:
-
-                try:
-                    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i], energy_fit=True)
-                    if bonded_parameters['force_constant'] > 0.01:
-                        converged = True
-                    else: 
-                        converged = False
-                        i += 1
-                except RuntimeError:
-                    i += 1
-                    if min_index + i >= 50 or min_index -i <=0:
+                if min_index + i >= 50 or min_index -i <=0:
                         # Before fitting, may need to reflect energies about a particular angle
                         mirror_angles = np.zeros_like(all_angles)
                         mirror_energies = np.zeros_like(all_energies)
@@ -431,14 +418,51 @@ class State(object):
                         all_angles.extend(mirror_angles)
                         all_energies.extend(mirror_energies)
                         all_probabilities.extend(mirror_probabilities)
+                        bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
+                        converged=True
 
-                        #bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
-                        try:
-                            bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
-                            converged=True
-                        except RuntimeError:
-                            bonded_parameters = self.fit_to_gaussian(all_angles, all_energies, energy_fit=True)
+
+                else:
+                    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_probabilities[min_index-i:min_index+i])
+                    if bonded_parameters['force_constant'] > 0.01:
                         converged = True
+                    else:
+                        converged = False
+                        i += 1
+            except RuntimeError:
+                i+=1
+                converged = False
+
+                #try:
+                #    bonded_parameters = self.fit_to_gaussian(all_angles[min_index-i:min_index+i], all_energies[min_index-i:min_index+i], energy_fit=True)
+                #    if bonded_parameters['force_constant'] > 0.01:
+                #        converged = True
+                #    else: 
+                #        converged = False
+                #        i += 1
+                #except RuntimeError:
+                #    i += 1
+                #    if min_index + i >= 50 or min_index -i <=0:
+                #        # Before fitting, may need to reflect energies about a particular angle
+                #        mirror_angles = np.zeros_like(all_angles)
+                #        mirror_energies = np.zeros_like(all_energies)
+                #        mirror_probabilities = np.zeros_like(all_probabilities)
+                #        for i, val in enumerate(all_angles):
+                #            mirror_energies[i] = all_energies[-i-1]
+                #            mirror_probabilities[i] = all_energies[-i-1]
+                #            mirror_angles[i] = 2*all_angles[-1] - all_angles[-i-1]
+                #    
+                #        all_angles.extend(mirror_angles)
+                #        all_energies.extend(mirror_energies)
+                #        all_probabilities.extend(mirror_probabilities)
+
+                #        #bonded_parameters = self.fit_to_gaussian(all_angles, all_energies)
+                #        try:
+                #            bonded_parameters = self.fit_to_gaussian(all_angles, all_probabilities)
+                #            converged=True
+                #        except RuntimeError:
+                #            bonded_parameters = self.fit_to_gaussian(all_angles, all_energies, energy_fit=True)
+                #        converged = True
 
         predicted_energies = self.harmonic_energy(all_angles, **bonded_parameters)
         if plot:
@@ -460,14 +484,13 @@ class State(object):
     
             
         
-    def compute_rdf(self, traj, atomtype_i, atomtype_j, output, 
+    def compute_rdf(self, atomtype_i, atomtype_j, output, 
             bin_width=0.01, exclude_up_to=3):
         """
         Compute RDF between pair of atoms, save to text
     
         Parameters
         ---------
-        traj : mdtraj Trajectory
         atomtype_i : str
             First atomtype 
         atomtype_j : str
@@ -492,11 +515,11 @@ class State(object):
         """
 
 
-        pairs = traj.topology.select_pairs("name '{0}'".format(atomtype_i),
+        pairs = self.traj.topology.select_pairs("name '{0}'".format(atomtype_i),
                                  "name '{0}'".format(atomtype_j))
         if exclude_up_to is not None:
-            to_delete = find_1_n_exclusions(traj.topology, pairs, exclude_up_to)
+            to_delete = find_1_n_exclusions(self.traj.topology, pairs, exclude_up_to)
             pairs = np.delete(pairs, to_delete, axis=0)
-        (first, second) = mdtraj.compute_rdf(traj, pairs, [0,2], bin_width=bin_width)
+        (first, second) = mdtraj.compute_rdf(self.traj, pairs, [0,2], bin_width=bin_width)
         np.savetxt('{}.txt'.format(output), np.column_stack([first,second]))
     

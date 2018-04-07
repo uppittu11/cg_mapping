@@ -18,7 +18,7 @@
 # sure to pass a trajectory file and a topology file
 # *that includes bonds*
 
-# In[1]:
+# In[5]:
 
 from cg_mapping import *
 import numpy as np
@@ -32,7 +32,7 @@ traj = mdtraj.load("npt_b.xtc", top="npt_b.pdb")
 
 # Next, we need to identify all the beadtypes in this system
 
-# In[2]:
+# In[6]:
 
 beadtypes = set([a.name for a in traj.topology.atoms])
 
@@ -41,9 +41,9 @@ beadtypes = set([a.name for a in traj.topology.atoms])
 # Construct a State object, which is really just a way to keep 
 # track of our units and temperature. In this case, we will be using $k_b = 8.314e{-3} kJ mol^{-1} K^{-1}$ and 305 Kelvin.
 
-# In[3]:
+# In[7]:
 
-system_state = cg_utils.State(k_b=8.314e-3, T=305)
+system_state = cg_utils.State(k_b=8.314e-3, T=305, traj=traj)
 
 
 # ## Bond stretching parameters
@@ -55,13 +55,13 @@ system_state = cg_utils.State(k_b=8.314e-3, T=305)
 # 4. From the fitted parameters, the force constant $K_b = \frac{4*k_b * T}{w^{2}}$ and the reference distance is $x_0$
 # 5. Bond distributions and energies are plotted for visualization and verification
 
-# In[4]:
+# In[8]:
 
 all_bonding_parameters = pd.DataFrame(columns=['#bond', 'force_constant','x0'])
 
 for x,y in itertools.combinations_with_replacement(beadtypes, 2):
     print("---{}-{}---".format(x,y))
-    bond_parameters = system_state.compute_bond_parameters(traj, x, y, plot=True)
+    bond_parameters = system_state.compute_bond_parameters(x, y, plot=True)
     if bond_parameters:
         all_bonding_parameters.loc[len(all_bonding_parameters)] =             ['{}-{}'.format(x,y),
             bond_parameters['force_constant'], bond_parameters['x0']]
@@ -81,13 +81,13 @@ all_bonding_parameters.to_csv('bond_parameters.dat', sep='\t', index=False)
 # 4. From the fitted parameters, the force constant $K_\theta = \frac{4*k_b * T}{w^{2}}$ and the reference angle is $\theta_0$
 # 5. Angle distributions and energies are plotted for visualization and verification
 
-# In[5]:
+# In[9]:
 
 all_angle_parameters = pd.DataFrame(columns=['#angle','force_constant', 'x0'])
 for x,z in itertools.combinations_with_replacement(beadtypes, 2):
         for y in beadtypes: 
             print("{}-{}-{}: ".format(x,y,z))
-            angle_parameters = system_state.compute_angle_parameters(traj, x, y, z, plot=True)
+            angle_parameters = system_state.compute_angle_parameters(x, y, z, plot=True)
             print(angle_parameters)
             if angle_parameters:
                 all_angle_parameters.loc[len(all_angle_parameters)] =                   ['{}-{}-{}'.format(x,y,z),
@@ -102,9 +102,14 @@ all_angle_parameters.to_csv('angle_parameters.dat', sep='\t', index=False)
 # ## Computing RDFs
 # To compute nonbonded interactions, a Boltzmann inversion of the radial distribution function (RDF) is necessary. However, given the highly correlated nature of nonbonded interactions, an iterative approach is necessary (see multistate, iterative Boltzmann inversion developed by Timothy Moore)
 
-# In[7]:
+# In[11]:
 
 for x,y in itertools.combinations_with_replacement(beadtypes, 2):
     print("---{}-{}---".format(x,y))
-    system_state.compute_rdf(traj, x,y,"{}-{}-{}".format(x,y, "state"))
+    system_state.compute_rdf(x,y,"{}-{}-{}".format(x,y, "state"))
+
+
+# In[ ]:
+
+
 
