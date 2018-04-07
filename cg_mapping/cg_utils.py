@@ -275,7 +275,7 @@ class State(object):
     
     
     
-    def compute_angle_parameters(self, traj, atomtype_i, atomtype_j, atomtype_k, plot=False):
+    def compute_angle_parameters(self, G, traj, atomtype_i, atomtype_j, atomtype_k, plot=False):
         """
         Calculate angle parameters from a trajectory
         Compute the probability distribution of angles
@@ -284,6 +284,8 @@ class State(object):
         Parameters
         ---------
         traj : mdtraj Trajectory
+        G : NetworkX Graph
+            Bonds are edges connecting to atom indices represented by nodes
         atomtype_i : str
             First atomtype 
         atomtype_j : str

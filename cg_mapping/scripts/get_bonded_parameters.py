@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import mdtraj
 import itertools
+import networkx as nx
+from networkx import NetworkXNoPath
+
 import argparse
 
 """ Simple script to iterate through all bead types
@@ -44,11 +47,17 @@ all_bonding_parameters.to_csv('bond_parameters.dat', sep='\t', index=False)
 print("*"*20)
 print("Angle parameters")
 print("*"*20)
+G = nx.Graph()
+G.add_nodes_from([a.index for a in traj.topology.atoms])
+bonds = [b for b in traj.topology.bonds]
+bonds_by_index = [(b[0].index, b[1].index) for b in bonds]
+G.add_edges_from(bonds_by_index)
+
 all_angle_parameters = pd.DataFrame(columns=['#angle','force_constant', 'x0'])
 for x,z in itertools.combinations_with_replacement(beadtypes, 2):
         for y in beadtypes: 
             print("{}-{}-{}: ".format(x,y,z))
-            angle_parameters = system_state.compute_angle_parameters(traj, x, y, z)
+            angle_parameters = system_state.compute_angle_parameters(traj, G, x, y, z)
             print(angle_parameters)
             if angle_parameters:
                 all_angle_parameters.loc[len(all_angle_parameters)] = \
