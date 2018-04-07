@@ -11,7 +11,8 @@ import argparse
 """ Simple script to iterate through all bead types
 and compute bond/angle parameters by fitting to
 Gaussian distributions"""
-beadtypes=['P4', 'P3', 'Nda', 'E1', 'C2', 'C3', 'PCP', 'PCN']
+#beadtypes=['P4', 'P3', 'Nda', 'E1', 'C2', 'C3', 'PCP', 'PCN']
+beadtypes=['_CH3', '_CH2']
 #beadtypes=['P4', 'P3', 'Nda', 'Na', 'C2', 'C1', 'Qa', 'Q0']
 
 parser = argparse.ArgumentParser()
