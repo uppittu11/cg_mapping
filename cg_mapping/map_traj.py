@@ -9,15 +9,15 @@ from optparse import OptionParser
 import numpy as np
 import mdtraj
 import mbuild as mb
-import cg_mapping
-from cg_mapping.CG_bead import CG_bead
+from CG_bead import *
 
-PATH_TO_MAPPINGS='/raid6/homes/ahy3nz/Programs/cg_mapping/cg_mapping/mappings/'
-HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/msibi_ff.xml"
+
+PATH_TO_MAPPINGS='/Users/parashara/Documents/devel/mapping/cer3'
+#HOOMD_FF="/raid6/homes/ahy3nz/Programs/setup/FF/CG/msibi_ff.xml"
 
 def _load_mapping(mapfile=None,reverse=False):
     """ Load a forward mapping
-    
+
     Parameters
     ----------
     mapfile : str
@@ -27,7 +27,7 @@ def _load_mapping(mapfile=None,reverse=False):
     -------
     mapping_dict : OrderedDict()
         OrderedDict (CG bead index : [beadtype, list of atom indices])
-    
+
     Notes
     -----
     mapping files are ":" delimited
@@ -49,12 +49,11 @@ def _load_mapping(mapfile=None,reverse=False):
 
                 else:
                     mapping_dict.update({line.split(":")[0].rstrip():
-                            [line.split(":")[1].rstrip(), line.split(":")[2].rstrip().split()]})
-
+                            [line.split(":")[1].rstrip(), eval(line.split(":")[2])]})
     return mapping_dict, bonding_info
 
 
-   
+
 def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
         all_bonding_info=None):
     """ Create CG topology from given topology and mapping
@@ -63,12 +62,12 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
     ---------
     topol : mdtraj Topology
     all_CG_mappings : dict
-        maps residue names to respective CG 
+        maps residue names to respective CG
         mapping dictionaries(CG index, [beadtype, atom indices])
     water_bead_mapping : int
         specifies how many water molecules get mapped to a water CG bead
     all_bonding_info : dict
-        maps residue names to bonding info arrays 
+        maps residue names to bonding info arrays
         np.ndarray (n, 2)
 
 
@@ -94,23 +93,20 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
             temp_CG_beads = [None]*len(molecule_mapping.keys())
             CG_atoms = []
 
-            for index, atom in enumerate(residue.atoms):
-                temp_CG_indices.append(str(index))
-                temp_CG_atoms.append(atom)
-                for key in molecule_mapping.keys():
-                    if set(molecule_mapping[key][1]) == set(temp_CG_indices):
-                        new_bead = CG_bead(beadindex=0, 
-                                           beadtype=molecule_mapping[key][0],
-                                           resname=residue.name,
-                                           atom_indices=[atom.index for atom in temp_CG_atoms])
-                        CG_beadindex +=1 
-                        temp_CG_indices = []
-                        temp_CG_atoms = []
-                        temp_CG_beads[int(key)] = new_bead
+            # Make a list of atoms in the residue
+            atoms = []
+            for atom in residue.atoms:
+                atoms.append(atom)
 
-                    else:
-                        pass
-
+            for key in molecule_mapping.keys():
+                for index in molecule_mapping[key][1]:
+                    temp_CG_atoms.append(atoms[index])
+                new_bead = CG_bead(beadindex=0,
+                                   beadtype=molecule_mapping[key][0],
+                                   resname=residue.name,
+                                   atom_indices=[atom.index for atom in temp_CG_atoms])
+                temp_CG_atoms = []
+                temp_CG_beads[int(key)] = new_bead
 
             # Add beads to topology by adding atoms
             for index, bead in enumerate(temp_CG_beads):
@@ -119,9 +115,10 @@ def _create_CG_topology(topol=None, all_CG_mappings=None, water_bead_mapping=4,
                 new_CG_atom = CG_topology.add_atom(bead.beadtype, None, temp_residue)
                 CG_atoms.append(new_CG_atom)
 
-            # Add bonds to topolgoy 
+            # Add bonds to topolgoy
             bonding_info = all_bonding_info[residue.name]
             for (index_i, index_j) in bonding_info:
+                print(CG_atoms[int(index_i)].name)
                 CG_topology.add_bond(CG_atoms[int(index_i)], CG_atoms[int(index_j)])
 
         else:
@@ -189,7 +186,7 @@ def _map_waters(traj, water_start, frame_index):
     print("K-means for frame {}: {}".format(frame_index, end-start))
 
     return single_frame_coms
- 
+
 def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=True):
     """Take atomistic trajectory and convert to CG trajectory
 
@@ -206,7 +203,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
     ------
     CG_xyz : np.ndarray(n_frame, n_CG_beads, 3)
 
-    
+
     """
     # Iterate through the CG_topology
     # For each bead, get the atom indices
@@ -219,7 +216,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
     for index, bead in enumerate(CG_topology_map):
         if 'HOH' not in bead.resname:
             # Handle non-water residuse with center of mass calculation over all frames
-            atom_indices = bead.atom_indices 
+            atom_indices = bead.atom_indices
             # Two ways to compute center of mass, both are pretty fast
             bead_coordinates = mdtraj.compute_center_of_mass(traj.atom_slice(atom_indices))
             CG_xyz[:, index, :] = bead_coordinates
@@ -245,7 +242,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
         if parallel:
             all_frame_coms = []
             with Pool() as p:
-                all_frame_coms = p.starmap(_map_waters, zip(itertools.repeat(traj), 
+                all_frame_coms = p.starmap(_map_waters, zip(itertools.repeat(traj),
                     itertools.repeat(water_start), range(traj.n_frames)))
 
             end = time.time()
@@ -260,7 +257,7 @@ def _convert_xyz(traj=None, CG_topology_map=None, water_bead_mapping=4,parallel=
             print("Writing took: {}".format(end-start))
 
             return CG_xyz
-        
+
         else:
             from sklearn import cluster
             for frame_index, frame in enumerate(traj):
@@ -327,37 +324,28 @@ parser.add_option("-o", action="store", type="string", dest = "output", default=
 traj = mdtraj.load(options.trajfile, top=options.topfile)
 topol = traj.topology
 start=time.time()
+
 # Read in the mapping files, could be made more pythonic
-DSPCmapfile = os.path.join(PATH_TO_MAPPINGS,'DSPC.map')#'mappings/DSPC.map'
-watermapfile = os.path.join(PATH_TO_MAPPINGS,'water.map')
-alc16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16OH.map')
-acd16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16FFA.map')
+#DSPCmapfile = os.path.join(PATH_TO_MAPPINGS,'DSPC.map')#'mappings/DSPC.map'
+#watermapfile = os.path.join(PATH_TO_MAPPINGS,'water.map')
+#alc16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16OH.map')
+#acd16mapfile = os.path.join(PATH_TO_MAPPINGS,'C16FFA.map')
+ucer3mapfile = os.path.join(PATH_TO_MAPPINGS, 'ucer3.map')
+
 # Huge dictionary of dictionaries, keys are molecule names
 # Values are the molecule's mapping dictionary
 # could be made more pythonic
 all_CG_mappings = OrderedDict()
 all_bonding_info = OrderedDict()
 
-molecule_mapping, molecule_bonding = _load_mapping(mapfile=DSPCmapfile)
-all_CG_mappings.update({'DSPC': molecule_mapping})
-all_bonding_info.update({'DSPC': molecule_bonding})
-
-molecule_mapping, molecule_bonding = _load_mapping(mapfile=watermapfile)
-all_CG_mappings.update({'HOH': molecule_mapping})
-all_bonding_info.update({'HOH': molecule_bonding})
-
-molecule_mapping, molecule_bonding = _load_mapping(mapfile=alc16mapfile)
-all_CG_mappings.update({'alc16': molecule_mapping})
-all_bonding_info.update({'alc16': molecule_bonding})
-
-molecule_mapping, molecule_bonding = _load_mapping(mapfile=acd16mapfile)
-all_CG_mappings.update({'acd16': molecule_mapping})
-all_bonding_info.update({'acd16': molecule_mapping})
+molecule_mapping, molecule_bonding = _load_mapping(mapfile=ucer3mapfile)
+all_CG_mappings.update({'ucer3' : molecule_mapping})
+all_bonding_info.update({'ucer3' : molecule_bonding})
 
 CG_topology_map, CG_topology = _create_CG_topology(topol=topol, all_CG_mappings=all_CG_mappings, all_bonding_info=all_bonding_info)
 CG_xyz = _convert_xyz(traj=traj, CG_topology_map=CG_topology_map)
 
-CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time, 
+CG_traj = mdtraj.Trajectory(CG_xyz, CG_topology, time=traj.time,
         unitcell_lengths=traj.unitcell_lengths, unitcell_angles = traj.unitcell_angles)
 
 
@@ -370,8 +358,6 @@ CG_traj[-1].save('{}.h5'.format(options.output))
 CG_traj[-1].save('{}.xyz'.format(options.output))
 CG_traj[-1].save('{}.pdb'.format(options.output))
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
     mb_compound = mb.Compound()
     mb_compound.from_trajectory(CG_traj, frame=-1, coords_only=False)
     original_box = mb.Box(lengths=[length for length in mb_compound.periodicity])
@@ -405,7 +391,6 @@ with warnings.catch_warnings():
     mb_compound.save('{}.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=original_box)
     mirrored_image.save('{}_2x2x2.hoomdxml'.format(options.output), ref_energy = 0.239, ref_distance = 10, forcefield_files=HOOMD_FF, overwrite=True, box=new_box)
 
-    
 end=time.time()
 print(end-start)
 
