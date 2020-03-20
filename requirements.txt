@@ -1,0 +1,4 @@
+mbuild
+foyer
+mdtraj
+scipy
