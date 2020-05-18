@@ -10,7 +10,7 @@ class TestTraj(ConfTest):
         minimal_mapper._construct_traj()
         assert minimal_mapper._cg_traj.n_atoms == 460
         assert np.allclose(minimal_mapper._cg_traj.xyz[0,0],
-                           [ 4.1871777,  5.88796  , 15.2696705])
+                           [1.0085664, 1.4182341, 3.6780086])
         assert np.allclose(minimal_mapper._cg_traj.unitcell_lengths[0],
                            [6.3977127, 6.3977127, 8.594183 ])
         
