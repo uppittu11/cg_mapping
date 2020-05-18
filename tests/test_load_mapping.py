@@ -1,11 +1,14 @@
 import pytest
 from cg_mapping.mapping import ResMapping
 from cg_mapping.mapper import Mapper
+from cg_mapping.io import default_mapping_dir
+from os import path
 from conf_test import ConfTest
+
 
 class TestLoadMapping(ConfTest):
     def test_single_mapfile(self):
-        filename = "/Users/parashara/devel/git/cg_mapping/cg_mapping/mappings/chol.map"
+        filename = path.join(default_mapping_dir(), "chol.map")
         mapping = ResMapping.load("chol", filename)
         assert mapping.name == "chol"
         assert len(mapping.beads) == 9
