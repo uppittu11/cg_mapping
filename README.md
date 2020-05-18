@@ -2,9 +2,19 @@
 [![Build Status](https://dev.azure.com/pshama/cg_mapping/_apis/build/status/uppittu11.cg_mapping?branchName=master)](https://dev.azure.com/pshama/cg_mapping/_build/latest?definitionId=2&branchName=master)
 [![codecov](https://codecov.io/gh/uppittu11/cg_mapping/branch/master/graph/badge.svg)](https://codecov.io/gh/uppittu11/cg_mapping)
 
-#### Mapping atomistic systems to coarse-grained systems
+## Mapping atomistic systems to coarse-grained systems
 
 Convert an atomistic trajectory to a coarse-grained trajectory using MDTraj and user-defined mapping files.
+
+## Installation
+The package can be installed locally using `pip`.
+Here is how to install `cg_mapping` in a new conda environment:
+```bash
+git clone https://github.com/uppittu11/cg_mapping.git
+conda create -n cg_mapping_env -c conda-forge --file requirements.txt -y
+conda activate cg_mapping_env
+cd cg_mapping && pip install -e .
+```
 
 ## Usage
 The CG mapping module can be scripted and run from a python interpreter.
