@@ -93,6 +93,11 @@ class Mapper:
 
 
     def cg_map(self):
+        """ 
+        Execute full CG mapping pipeline and return the CG trajectory
+        
+        """        
+        
         if self._cg_traj is None:
             self._map_topology()
             self._convert_xyz()
@@ -156,6 +161,7 @@ class Mapper:
             The atomistic residue to be mapped to CG
 
         """    
+        
         # Obtain the correct molecule mapping based on the residue
         res_mapping = self._mappings[residue.name]
 
@@ -229,6 +235,11 @@ class Mapper:
         
     
     def _construct_traj(self):
+        """
+        Create an mdtraj.Trajectory from the CG topology and xyz.
+
+        """
+
         cg_traj = Trajectory(self._cg_xyz, 
                              self._cg_top, 
                              time=self._aa_traj.time,
