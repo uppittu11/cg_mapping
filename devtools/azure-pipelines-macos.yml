@@ -1,0 +1,37 @@
+jobs:
+- job: 'macOS'
+  pool:
+    vmImage: 'macOS-latest'
+  timeoutInMinutes: 60
+
+  strategy:
+    matrix:
+      Python36:
+        CONDA_PY: '3.6'
+      Python37:
+        CONDA_PY: '3.7'
+    maxParallel: 10
+  
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: sudo chmod -R 777 /usr/local/miniconda
+    displayName: Fix conda permissions
+
+  - bash: |
+      conda config --set always_yes yes --set changeps1 no
+      conda config --add channels conda-forge
+      conda create -n test-environment python=$(CONDA_PY) --file requirements-dev.txt
+      source activate test-environment
+    displayName: Create new conda environment
+
+  - bash: |
+      source activate test-environment
+      pip install -e .
+    displayName: Installing analysis
+    
+  - bash: |
+      source activate test-environment
+      python -m pytest -v
+    displayName: Running tests

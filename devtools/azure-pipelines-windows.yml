@@ -1,0 +1,35 @@
+jobs:
+- job: 'windows'
+  pool:
+    vmImage: 'windows-latest'
+  timeoutInMinutes: 60
+
+  strategy:
+    matrix:
+      Python36:
+        CONDA_PY: '3.6'
+      Python37:
+        CONDA_PY: '3.7'
+    maxParallel: 10
+  
+  steps:
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+
+  - script: |
+      ECHO ON
+      set PYTHONUNBUFFERED=1
+      conda config --set always_yes yes --set changeps1 no
+      conda config --add channels conda-forge
+      conda create -n test-environment python=$(CONDA_PY) --file requirements-dev.txt
+    displayName: Create new conda environment
+
+  - script: |
+      call activate test-environment
+      pip install -e .
+    displayName: Installing analysis
+    
+  - script: |
+      call activate test-environment
+      python -m pytest -v
+    displayName: Running tests

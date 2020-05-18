@@ -1,0 +1,6 @@
+mdtraj
+numpy
+scikit-learn
+pytest
+pytest-cov
+codecov
