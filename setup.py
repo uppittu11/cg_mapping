@@ -8,20 +8,6 @@ except ImportError:
           'http://mdtraj.org/latest/installation.html for help!')
     sys.exit(1)
 
-try:
-    import mbuild
-except ImportError:
-    print('Building and running cg_mapping requires mbuild. See '
-          'https://mosdef.org/mbuild/installation.html for help!')
-    sys.exit(1)
-
-try:
-    import foyer
-except ImportError:
-    print('Building and running cg_mapping requires foyer. See '
-          'https://mosdef.org/foyer/installation.html for help!')
-    sys.exit(1)
-
 setup(name='cg_mapping',
       version='0.1',
       description=('Using MDTraj libraries and user-defined mapping '

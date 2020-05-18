@@ -29,7 +29,7 @@ jobs:
   - bash: |
       source activate test-environment
       pip install -e .
-    displayName: Installing analysis
+    displayName: Installing cg_mapping
     
   - bash: |
       source activate test-environment
@@ -40,7 +40,7 @@ jobs:
   - bash: |
       source activate test-environment
       pip install pytest-azurepipelines
-      python -m pytest -v  --cov analysis --cov-report=html --no-coverage-upload
+      python -m pytest -v  --cov cg_mapping --cov-report=html --no-coverage-upload
       bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)
     displayName: Running tests and calculating coverage
     condition: eq( variables['CONDA_PY'], '3.7' )
