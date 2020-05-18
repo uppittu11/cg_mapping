@@ -50,8 +50,9 @@ def _map_solvent(frame, mapping, solvent_name):
     for atom_indices in water_clusters.values():
         atom_indices = np.hstack(atom_indices)
         res_masses = masses.take(atom_indices)
-        com = np.mean((res_masses[None, :, None] * 
-                       frame.xyz[-1,atom_indices,:]), axis=1)
+        com = (np.sum((res_masses[None, :, None] * 
+                      frame.xyz[-1,atom_indices,:]), axis=1) /
+               np.sum(res_masses))
         coms.append(com)
 
     return coms
