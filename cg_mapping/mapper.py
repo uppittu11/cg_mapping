@@ -1,5 +1,6 @@
 from os import path, system
 import glob
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 from mdtraj import Trajectory, Topology
@@ -44,6 +45,8 @@ class Mapper:
         self._mappings = dict()
         self._solvent_mapping = solvent_mapping
         self._solvent_name = solvent_name
+        self._cg_traj = None
+        self._cg_top  = None
 
 
     def load_trajectory(self, trajectory):
@@ -89,8 +92,13 @@ class Mapper:
         self._mappings.update({name : mapping})
 
 
-    def cg_map(self, ):
-        pass
+    def cg_map(self):
+        if self._cg_traj is None:
+            self._map_topology()
+            self._convert_xyz()
+            self._construct_traj()
+
+        return self._cg_traj
 
 
     def _map_topology(self):
@@ -126,7 +134,7 @@ class Mapper:
         residue: mdtraj.topology.Residue
             The atomistic residue to be mapped to CG
 
-        """        
+        """
         self._solvent_counter += 1
         if self._solvent_counter % self._solvent_mapping == 0:
             cg_residue = self._cg_top.add_residue(self._solvent_name, 
@@ -163,7 +171,7 @@ class Mapper:
         cg_beads = []
 
         # Create CG beads for each bead in the mapping
-        for i, bead in enumerate(res_mapping.beads):
+        for bead in res_mapping.beads:
             bead_atoms = atoms.take(bead.mapping_indices)
             cg_bead = CGBead(bead_type=bead.name, atom_indices=bead_atoms)
             mdtraj_bead = self._cg_top.add_atom(cg_bead.bead_type, None, 
@@ -193,8 +201,9 @@ class Mapper:
                 atom_indices = self._atom_bead_mapping[bead].atom_indices
                 masses = np.array([self._aa_top.atom(i).element.mass
                                    for i in atom_indices])
-                bead_xyz = np.mean((self._aa_traj.xyz[:,atom_indices,:]
-                                    * masses[None,:,None]), axis=1)
+                bead_xyz = (np.sum((self._aa_traj.xyz[:,atom_indices,:]
+                                    * masses[None,:,None]), axis=1) / 
+                            np.sum(masses))
 
             cg_xyz.append(bead_xyz)
         
@@ -205,11 +214,16 @@ class Mapper:
         # Perform kmeans, frame-by-frame, over all water residues
         # Workers will return centers of masses of clusters, frame index, and cg index
         # Master will assign to CG_xyz
-        coms = [_map_solvent(frame, self._solvent_mapping, self._solvent_name)
-                for frame in self._aa_traj]
-        
-        coms = np.squeeze(np.array(coms))
-        cg_xyz[:,self._cg_top.select(f"name {self._solvent_name}"),:] = coms
+        if self._solvent_counter > 0:
+            with Pool(cpu_count()) as pool:
+                chunksize = int(self._aa_traj.n_frames / cpu_count()) + 1
+                args = list(zip(self._aa_traj, 
+                                [self._solvent_mapping]*self._aa_traj.n_frames,
+                                [self._solvent_name]*self._aa_traj.n_frames))
+                coms = pool.starmap(_map_solvent, args, chunksize)
+            
+            coms = np.squeeze(np.array(coms))
+            cg_xyz[:,self._cg_top.select(f"name {self._solvent_name}"),:] = coms
 
         self._cg_xyz = cg_xyz
         
