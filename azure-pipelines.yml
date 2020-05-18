@@ -1,0 +1,53 @@
+jobs:
+- job: 'Linux'
+  pool:
+    vmImage: 'ubuntu-latest'
+  timeoutInMinutes: 60
+
+  strategy:
+    matrix:
+      Python36:
+        CONDA_PY: '3.6'
+      Python37:
+        CONDA_PY: '3.7'
+    maxParallel: 10
+  
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: sudo install -d -m 0777 /usr/envs
+    displayName: Fix conda permissions
+
+  - bash: |
+      conda config --set always_yes yes --set changeps1 no
+      conda config --add channels conda-forge
+      conda create -n test-environment python=$(CONDA_PY) --file requirements-dev.txt
+      source activate test-environment
+    displayName: Create new conda environment
+
+  - bash: |
+      source activate test-environment
+      pip install -e .
+    displayName: Installing analysis
+    
+  - bash: |
+      source activate test-environment
+      python -m pytest -v
+    displayName: Running tests
+    condition: eq( variables['CONDA_PY'], '3.6' )
+  
+  - bash: |
+      source activate test-environment
+      pip install pytest-azurepipelines
+      python -m pytest -v  --cov analysis --cov-report=html --no-coverage-upload
+      bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)
+    displayName: Running tests and calculating coverage
+    condition: eq( variables['CONDA_PY'], '3.7' )
+
+  - task: PublishCodeCoverageResults@1
+    inputs: 
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+    condition: eq( variables['CONDA_PY'], '3.7' ) 
