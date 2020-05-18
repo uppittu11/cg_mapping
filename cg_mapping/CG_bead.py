@@ -1,25 +1,29 @@
-class CG_bead():
-    def __init__(self, beadindex=0, beadtype=None, resname=None, atom_indices=None):
-        self._beadindex = beadindex
-        self._beadtype = beadtype
-        self._resname = resname
+class CGBead:
+    def __init__(self,
+            bead_index=0,
+            bead_type=None,
+            res_name=None,
+            atom_indices=None):
+        self._bead_index = bead_index
+        self._bead_type = bead_type
+        self._res_name = res_name
         self._atom_indices = atom_indices
 
     @property
-    def beadindex(self):
-        return self._beadindex
+    def bead_index(self):
+        return self._bead_index
 
-    @beadindex.setter
-    def beadindex(self, beadindex):
-        self._beadindex = beadindex
+    @bead_index.setter
+    def bead_index(self, bead_index):
+        self._bead_index = bead_index
 
     @property
-    def beadtype(self):
-        return self._beadtype
+    def bead_type(self):
+        return self._bead_type
 
-    @beadtype.setter
-    def beadtype(self, beadtype):
-        self._beadtype = beadtype
+    @bead_type.setter
+    def bead_type(self, bead_type):
+        self._bead_type = bead_type
 
     @property
     def atom_indices(self):
@@ -30,10 +34,10 @@ class CG_bead():
         self._atom_indices = atom_indices
 
     @property
-    def resname(self):
-        return self._resname
+    def res_name(self):
+        return self._res_name
 
-    @resname.setter
-    def resname(self, beadindex):
-        self._resname = beadindex
+    @res_name.setter
+    def res_name(self, res_name):
+        self._res_name = res_name
 

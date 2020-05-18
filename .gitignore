@@ -1,0 +1,13 @@
+# ignore cached stuff
+*.py[cod]
+*.ipynb_checkpoints
+*log.txt*
+
+# ignore python eggs
+*.egg
+*.egg-info
+
+# ignore vscode stuff
+.vscode
+.vscode/*
+.*code-workspace
