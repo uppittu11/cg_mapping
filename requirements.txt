@@ -1,4 +1,3 @@
-mbuild
-foyer
 mdtraj
 numpy
+scikit-learn
