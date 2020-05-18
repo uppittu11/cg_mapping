@@ -1,4 +1,4 @@
 mbuild
 foyer
 mdtraj
-scipy
+numpy
