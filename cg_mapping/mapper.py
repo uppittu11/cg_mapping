@@ -131,8 +131,7 @@ class Mapper:
         if self._solvent_counter % self._solvent_mapping == 0:
             cg_residue = self._cg_top.add_residue(self._solvent_name, 
                                                   self._cg_top.add_chain())
-            cg_bead = CGBead(bead_index=0, bead_type=self._solvent_name, 
-                             res_name=self._solvent_name)
+            cg_bead = CGBead(bead_type=self._solvent_name)
             mdtraj_bead = self._cg_top.add_atom(self._solvent_name, None, 
                                                 cg_residue)
             self._atom_bead_mapping[mdtraj_bead] = cg_bead
@@ -166,8 +165,7 @@ class Mapper:
         # Create CG beads for each bead in the mapping
         for i, bead in enumerate(res_mapping.beads):
             bead_atoms = atoms.take(bead.mapping_indices)
-            cg_bead = CGBead(bead_index=i, bead_type=bead.name,
-                             res_name=residue.name, atom_indices=bead_atoms)
+            cg_bead = CGBead(bead_type=bead.name, atom_indices=bead_atoms)
             mdtraj_bead = self._cg_top.add_atom(cg_bead.bead_type, None, 
                                                 cg_residue)
             cg_beads.append(mdtraj_bead)
