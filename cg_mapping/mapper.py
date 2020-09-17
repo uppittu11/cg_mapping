@@ -1,4 +1,5 @@
 from os import path, system
+from copy import deepcopy
 import glob
 from multiprocessing import Pool, cpu_count
 
@@ -49,6 +50,15 @@ class Mapper:
         self._cg_top  = None
 
 
+    @property
+    def mappings(self):
+        return deepcopy(self._mappings)
+
+
+    @mappings.setter
+    def mappings(self):
+        raise TypeError("'mappings' attribute does not support assignment")
+
     def load_trajectory(self, trajectory):
         self._aa_traj = trajectory
         self._aa_top = trajectory.top
@@ -76,22 +86,25 @@ class Mapper:
             self.load_mapping(filename)
 
 
-    def load_mapping(self, filename):
+    def load_mapping(self, filename_or_mapping):
         """
         Load a single mapping file from disk.
 
         Arguments:
         ----------
-        filename : string
-            Path to the mapping file
+        filename : string or ResMapping
+            Path to the mapping file or ResMapping object to add to library
 
         """
+        if isinstance(filename_or_mapping, ResMapping):
+            self._mappings.update({
+                filename_or_mapping.name : filename_or_mapping})
+        else:
+            assert path.exists(filename_or_mapping)
 
-        assert path.exists(filename)
-
-        name = path.basename(filename).split(".")[0]
-        mapping = ResMapping.load(name, filename)
-        self._mappings.update({name : mapping})
+            name = path.basename(filename_or_mapping).split(".")[0]
+            mapping = ResMapping.load(name, filename_or_mapping)
+            self._mappings.update({name : mapping})
 
 
     def cg_map(self):
@@ -131,6 +144,7 @@ class Mapper:
             else:
                 self._map_nonsolvent_top(residue)
 
+
     def _map_solvent_top(self, residue):
         """
         Create CG solvent residue from given residue and add it to the
@@ -151,6 +165,7 @@ class Mapper:
                                                 cg_residue)
             self._atom_bead_mapping[mdtraj_bead] = cg_bead
             return cg_residue
+
 
     def _map_nonsolvent_top(self, residue):
         """
