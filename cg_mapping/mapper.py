@@ -54,7 +54,7 @@ class Mapper:
         self._aa_top = trajectory.top
 
 
-    def load_mapping_dir(self, mapping_dir=None):
+    def load_mapping_dir(self, mapping_dir=None, **kwargs):
         """
         Load all mapping files from a directory.
 
@@ -63,10 +63,12 @@ class Mapper:
         mapping_dir : string, default=None
             Path to the directory containing mapping files. Loads from
             the internal `mappings` directory by default
+        **kwargs : keyword arguments
+            Keyword arguments to pass to mapping_dir. Namely the ff arg.
 
         """
         if mapping_dir is None:
-            mapping_dir = default_mapping_dir()
+            mapping_dir = default_mapping_dir(**kwargs)
 
         assert path.exists(mapping_dir)
 
